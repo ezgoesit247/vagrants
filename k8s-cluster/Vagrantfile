@@ -1,0 +1,103 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+PURPOSE = "k8s-cluster"
+LIFECYCLE = "dev"
+DOMAIN = "anytown.usa"
+
+IMAGE = "ubuntu/bionic64"
+PROVIDER = "virtualbox"
+ROOT_KEY = "root_key.sh"
+
+CONTROLER = "controller"
+CONTROLER_SCRIPT = "simple.sh"
+HOSTNAME_CONTROLER = "#{CONTROLER}.#{LIFECYCLE}.#{DOMAIN}"
+VM_NAME_CONTROLER = "#{PURPOSE}_#{LIFECYCLE}_#{CONTROLER}"
+
+MASTER = "master"
+MASTER_SCRIPT = "simple.sh"
+HOSTNAME_MASTER = "#{MASTER}.#{LIFECYCLE}.#{DOMAIN}"
+VM_NAME_MASTER = "#{PURPOSE}_#{LIFECYCLE}_#{MASTER}"
+
+NODE_COUNT = 2
+NODE = "node"
+NODE_SCRIPT = "simple.sh"
+HOSTNAME_NODE = "#{NODE}.#{LIFECYCLE}.#{DOMAIN}"
+VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}_#{NODE}"
+
+$GENKEY = <<EOF
+date > /etc/vagrant_provisioned_at
+ssh-keygen -t rsa -b 4096 -f "/root/.ssh/provisioned_id_rsa.`date +%s`" -q -N ""
+EOF
+
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+   # NO DEFAULT
+   #config.vm.box = IMAGE
+
+   ### CONTROLER ###
+   config.vm.define "#{CONTROLER}" do |subconfig|
+      subconfig.vm.box = "#{IMAGE}"
+      subconfig.vm.hostname = "#{CONTROLER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.provider "#{PROVIDER}" do |v|
+         v.name = "#{VM_NAME_CONTROLER}"
+         #v.memory = 2048
+      end
+      subconfig.vm.provision "shell", path: "#{CONTROLER_SCRIPT}"
+      subconfig.vm.provision "shell", path: "#{ROOT_KEY}"
+      subconfig.vm.provision "shell", inline: $GENKEY
+
+      PORT = 2400
+      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+   end
+
+   ### MASTER ###
+   config.vm.define "#{MASTER}" do |subconfig|
+      subconfig.vm.box = "#{IMAGE}"
+      subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.provider "#{PROVIDER}" do |v|
+         v.name = "#{VM_NAME_MASTER}"
+         #v.memory = 2048
+      end
+      subconfig.vm.provision "shell", path: "#{MASTER_SCRIPT}"
+      subconfig.vm.provision "shell", path: "#{ROOT_KEY}"
+      subconfig.vm.provision "shell", inline: $GENKEY
+
+      PORT = 2300
+      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+   end
+
+### NODES ###
+   (1..NODE_COUNT).each do |i|
+      config.vm.define "#{NODE}#{i}" do |subconfig|
+         subconfig.vm.box = "#{IMAGE}"
+         subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+         subconfig.vm.provider "#{PROVIDER}" do |v|
+           v.name = "#{VM_NAME_NODE}#{i}"
+           #v.memory = 2048
+         end
+         subconfig.vm.provision "shell", path: "#{NODE_SCRIPT}"
+         subconfig.vm.provision "shell", path: "#{ROOT_KEY}"
+         subconfig.vm.provision "shell", inline: $GENKEY
+
+         PORT = 2300 + i
+         subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+
+      end
+   end
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  # config.vm.provision "shell", inline: <<-SHELL
+  #   apt-get update
+  #   apt-get install -y apache2
+  # SHELL
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  # config.vm.box_check_update = false
+
+end
