@@ -14,3 +14,4 @@ ln -sfn ../ntp-install.sh ./ubuntu.k8s-test.sh
 ln -sfn ../k8s-cluster/vagrant_key.sh ./vagrant_key.sh
 ln -sfn ../k8s-cluster/config_ssh-access.sh ./config_ssh-access.sh
 ln -sfn ../k8s-cluster/test-connections.sh ./test-connections.sh
+ln -sfn ../k8s-cluster/ansible.setup.sh ./ansible.setup.sh

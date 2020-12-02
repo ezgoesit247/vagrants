@@ -9,3 +9,4 @@ ubuntu.k8s-test.sh
 vagrant_key.sh
 config_ssh-access.sh
 test-connections.sh
+ansible.setup.sh
