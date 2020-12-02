@@ -1,3 +1,5 @@
 .vagrant/
 .log
 *.log
+Icon?
+_ssh_home
