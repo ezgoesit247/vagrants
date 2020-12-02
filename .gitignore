@@ -3,3 +3,14 @@
 *.log
 Icon?
 _ssh_home
+k8s/
+bionic64/
+centos-7/
+rhel7/
+ubuntu-16.04-xenial.vagrant-init/
+ubuntu-18.04-xenial/
+ubuntu-18.04/
+ubuntu-20.04-bento/
+ubuntu-xenial-16.04.vagrant-init/
+vagrtest/
+z-NO-GIT-ssh.setup.sh
