@@ -1,0 +1,1 @@
+../k8s-cluster/root_key.sh

@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-TEST=""
+TEST="-test"
 PURPOSE = "k8s-cluster#{TEST}"
 LIFECYCLE = "dev#{TEST}"
 DOMAIN = "anytown.usa"
@@ -41,10 +41,11 @@ if ! ntpstat > /dev/null 2>&1
    done
 fi' > /etc/init.d/ntpsync.sh \
    && chmod 755 /etc/init.d/ntpsync.sh \
-   && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
+   && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync \
 EOF
 
-BASHRC = "echo 'function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
+BASHRC = "echo '
+function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
 function green  { color 4 2 \"${*}\"; }
 function yellow { color 0 3 \"${*}\"; }
 function red { color 0 1 \"${*}\"; }
@@ -81,6 +82,7 @@ node_ip = ['10.250.0.51','10.250.0.52']
 host_ip = admin_ip + node_ip
 host_ip.each do |ip| IPLIST+="#{ip} " end
 $SYNC_HOSTS_FILE = <<EOF
+if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
 echo '#!/bin/bash
 > /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
 for ip in #{IPLIST}; do
@@ -88,9 +90,8 @@ ssh-keyscan -H ${ip} >> /root/.ssh/known_hosts; done
 cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
    && chown vagrant:vagrant /home/vagrant/.ssh/known_hosts \
    && chmod 600 /home/vagrant/.ssh/known_hosts
-' > /etc/init.d/synchosts.sh \
-&& chmod 755 /etc/init.d/synchosts.sh \
-&& ln -sfn /etc/init.d/synchosts.sh /etc/rc3.d/S01synchosts
+' > /etc/init/synchosts.sh \
+&& chmod 755 /etc/init/synchosts.sh \
 EOF
 
 VAGRANTFILE_API_VERSION = "2"

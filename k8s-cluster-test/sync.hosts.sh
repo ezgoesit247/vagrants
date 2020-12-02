@@ -1,0 +1,1 @@
+../k8s-cluster/sync.hosts.sh
