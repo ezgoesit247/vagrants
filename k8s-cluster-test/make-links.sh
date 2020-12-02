@@ -12,3 +12,4 @@ ln -s ../k8s-cluster/simple.sh simple.sh
 ln -s ../k8s-cluster/sync.hosts.sh sync.hosts.sh
 ln -s ../ntp-install.sh ubuntu.k8s-test.sh
 ln -s ../k8s-cluster/vagrant_key.sh vagrant_key.sh
+ln -s ../k8s-cluster/config_ssh-access.sh
