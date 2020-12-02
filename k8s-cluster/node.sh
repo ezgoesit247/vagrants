@@ -1,1 +1,0 @@
-ubuntu.commands.sudo.sh

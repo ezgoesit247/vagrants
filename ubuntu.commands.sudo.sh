@@ -30,7 +30,7 @@ sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
  && echo waiting... && sleep 3 \
 \
  && sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
- && sudo apt-get -y -qq --allow-unauthenticated install \
+ && sudo apt-get -y -qq install \
     docker-ce \
     docker-ce-cli \
     containerd.io \
@@ -51,7 +51,7 @@ sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
  && helm repo add stable https://charts.helm.sh/stable \
  && curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip \
  && if ! command -v aws > /dev/null; then echo "Installing AWS CLI..." && unzip -q awscliv2.zip && sudo ./aws/install; fi \
- && echo 'function showcolors { for bg in `seq 0 9`; do for fg in `seq 0 9`; do echo -n "`expr $fg` `expr $bg`: " && color `expr $fg` `expr $bg` "Tyler & Corey"; echo; done; done }'  >> ~vagrant/.bashrc   && echo 'alias colors=showcolors' >> ~vagrant/.bashrc   && echo 'function color  { echo -n "$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) "; }' >> ~vagrant/.bashrc   && echo 'function green  { color 4 2 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function yellow { color 0 3 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function red    { color 0 1 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function blue   { color 6 4 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function cyan   { color 4 6 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function grey   { color 0 7 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function pass   { echo; echo "$(green PASS: ${*})"; echo; }' >> ~vagrant/.bashrc   && echo 'function warn   { echo; echo "$(yellow PASS: ${*})"; echo; }' >> ~vagrant/.bashrc   && echo 'function fail   { echo; echo "$(red FAIL: ${*})"; echo; }' >> ~vagrant/.bashrc   && echo 'function info   { echo; echo "$(grey INFO: ${*})"; echo; }' >> ~vagrant/.bashrc \
+ && echo 'function showcolors { for bg in `seq 0 9`; do for fg in `seq 0 9`; do echo -n "`expr $fg` `expr $bg`: " && color `expr $fg` `expr $bg` "Tyler & Corey"; echo; done; done }'  >> ~vagrant/.bashrc   && echo 'alias colors=showcolors' >> ~vagrant/.bashrc   && echo 'function color  { echo -n "$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) "; }' >> ~vagrant/.bashrc   && echo 'function green  { color 4 2 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function yellow { color 0 3 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function red { color 0 1 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function blue   { color 6 4 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function cyan   { color 4 6 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function grey   { color 0 7 "${*}"; }' >> ~vagrant/.bashrc   && echo 'function pass   { echo; echo "$(green PASS: ${*})"; echo; }' >> ~vagrant/.bashrc   && echo 'function warn   { echo; echo "$(yellow PASS: ${*})"; echo; }' >> ~vagrant/.bashrc   && echo 'function fail   { echo; echo "$(red FAIL: ${*})"; echo; }' >> ~vagrant/.bashrc   && echo 'function info   { echo; echo "$(grey INFO: ${*})"; echo; }' >> ~vagrant/.bashrc \
  && echo|cat>>~vagrant/.bashrc<<EOF
 grep "DISTRIB_DESCRIPTION" /etc/lsb-release
 echo "Doing NTP sync..."

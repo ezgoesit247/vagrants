@@ -1,1 +1,0 @@
-../box.hosts_sync.sh
