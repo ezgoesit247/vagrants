@@ -3,7 +3,6 @@
 *.log
 Icon?
 _ssh_home
-k8s/
 bionic64/
 centos-7/
 rhel7/
