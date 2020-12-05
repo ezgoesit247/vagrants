@@ -12,9 +12,9 @@ PROVIDER = "virtualbox"
 ROOT_KEY_SCRIPT = "root_key.sh"
 VAGRANT_KEY_SCRIPT = "vagrant_key.sh"
 
-NODE_SCRIPT = "empty#{TEST}.sh"
-MASTER_SCRIPT = "empty#{TEST}.sh"
-CONTROLER_SCRIPT = "empty#{TEST}.sh"
+NODE_SCRIPT = "node#{TEST}.sh"
+MASTER_SCRIPT = "master#{TEST}.sh"
+CONTROLER_SCRIPT = "controller#{TEST}.sh"
 
 CONTROLER = "controller"
 HOSTNAME_CONTROLER = "#{CONTROLER}.#{LIFECYCLE}.#{DOMAIN}"
