@@ -81,6 +81,12 @@ if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws
 if command -v ansible > /dev/null 2>&1; then cyan \"ansible:\" && ansible --version; else yellow \"No Ansible\"; echo; fi;
 '"
 
+$WRITE_ADMIN_SCRIPTS = <<EOF
+   if [ ! -f  ]; then echo '#!/bin/bash
+   for ip in 10.250.0.10 10.250.0.20 10.250.0.51 10.250.0.52; do ssh root@${ip} "${1}"; done
+'
+EOF
+
 $SYNC_HOSTS_FILE = <<EOF
 if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
 echo '#!/bin/bash
@@ -109,8 +115,8 @@ if ! ntpstat > /dev/null 2>&1
 fi' > /etc/init.d/ntpsync.sh \
    && chmod 755 /etc/init.d/ntpsync.sh \
    && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync \
-   && echo "NTP sync..."
-   if command -v ntpstat; then
+   && echo 'echo "NTP sync..."
+   if command -v ntpstat > /dev/null 2>&1; then
       ntp_tries=15 && ntp_delay_seconds=2 && i=0
       while ! ntpstat 2> /dev/null
         do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1`
@@ -122,7 +128,7 @@ fi' > /etc/init.d/ntpsync.sh \
          then green "NTP Synchronization Status:" && ntpstat
          else red "NTP:" && echo "not synchronized"
       fi
-   fi
+   fi' >> .bashrc
 EOF
 
 NTP = 'echo ' + msg("Doing NTP")+'
@@ -266,6 +272,7 @@ EOF
    (1..node_ip.length()).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
          $HOOK = <<-EOF
+            #{NTP}
             #{DOCKER}
             #{K8S}
          EOF
