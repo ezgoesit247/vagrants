@@ -36,9 +36,9 @@ host_ip.each do |ip| IPLIST+="#{ip} " end
 
 def msg(message)
    if INTERACTIVE
-      return "%%%%%%%%%%%%%%% *** ***    #{message}    *** *** %%%%%%%%%%%%%%%"
+      return "%%%%%%%%%%%%%%% ******* *** ***    #{message}    *** *** *******  %%%%%%%%%%%%%%%"
    end
-   return "%%%%%%%%%%%%%%% *** ***    #{message}    *** *** %%%%%%%%%%%%%%%"
+   return "%%%%%%%%%%%%%%% ******* *** ***    #{message}    *** *** *******  %%%%%%%%%%%%%%%"
 #   return "echo export DEBIAN_FRONTEND=noninteractive"
 end
 
