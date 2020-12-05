@@ -1,0 +1,4 @@
+#!/bin/bash
+
+if [ ${#} -gt 0 ]; then vagrant destroy ${@} -f; else echo " Usage: Need argument(s) for vagrant destroy"; fi
+
