@@ -6,7 +6,6 @@ sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
     gnupg2 \
     gnupg-agent \
     python3 \
-    ansible \
     python3-pip \
     unzip \
     iputils-ping \
@@ -22,12 +21,14 @@ sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
      && if [ ${i} -ge ${ntp_tries} ]; then echo -n "NTP:" && echo bailing && break; fi \
    done \
 \
- && echo waiting... && sleep 3 \
+ && echo "Doing Ansible..." && sleep 3 \
+ && sudo apt-add-repository --yes --update ppa:ansible/ansible
+ && sudo apt install ansible
 \
  && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key --keyring /etc/apt/trusted.gpg.d/docker.gpg add - \
  && sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
 \
- && echo waiting... && sleep 3 \
+ && echo "Doing Docker..." && sleep 3 \
 \
  && sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
  && sudo apt-get -y -qq install \
@@ -38,7 +39,7 @@ sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
  && echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list \
  && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - \
 \
- && echo waiting... && sleep 3 \
+ && echo "Doing k8s..." && sleep 3 \
 \
  && sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
  && sudo apt-get -y -qq install \
