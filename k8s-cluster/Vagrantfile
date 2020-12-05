@@ -27,22 +27,9 @@ NODE = "node"
 HOSTNAME_NODE = "#{NODE}.#{LIFECYCLE}.#{DOMAIN}"
 VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}_#{NODE}"
 
-$NTP_SYNC = <<EOF
-echo '#!/bin/bash
-
-if ! ntpstat > /dev/null 2>&1
-   then service ntp stop && ntpdate time.nist.gov && service ntp start
-   ntp_tries=8 && ntp_delay_seconds=4 && i=0
-   while ! ntpstat
-     do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1`
-     if [ ${i} -ge ${ntp_tries} ]
-       then yellow "NTP:" && echo bailing && break
-     fi
-   done
-fi' > /etc/init.d/ntpsync.sh \
-   && chmod 755 /etc/init.d/ntpsync.sh \
-   && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
-EOF
+def msg(message)
+   return "%%%%%%%%%%%%%%% *** ***  #{message}  *** *** %%%%%%%%%%%%%%%"
+end
 
 BASHRC = "echo '
 function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
@@ -57,16 +44,16 @@ function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
 function fail   { echo \"$(red FAIL: ${*})\"; echo; }
 function info   { echo \"$(grey INFO: ${*})\"; echo; }
 grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
-#echo \"Doing NTP sync...\"
+echo \"NTP sync...\"
 #if ! ntpstat > /dev/null 2>&1
 # then service ntp stop && ntpdate time.nist.gov && service ntp start
-#   ntp_tries=8 && ntp_delay_seconds=4 && i=0
-#   while ! ntpstat
-#     do sleep \${ntp_delay_seconds} && i=\`expr ${i} + 1\`
-#     if [ \${i} -ge \${ntp_tries} ]
-#       then yellow \"NTP:\" && echo bailing && break
-#     fi
-#   done
+   ntp_tries=15 && ntp_delay_seconds=2 && i=0
+   while ! ntpstat 2> /dev/null
+     do sleep \${ntp_delay_seconds} && i=\`expr ${i} + 1\`
+     if [ \${i} -ge \${ntp_tries} ]
+       then yellow \"NTP:\" && echo bailing && break
+     fi
+   done
 #fi
 if ntpstat > /dev/null 2>&1
  then green \"NTP Synchronization Status:\" && ntpstat
@@ -77,10 +64,28 @@ if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --vers
 if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
 if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
 if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
-if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
 if command -v eksctl > /dev/null 2>&1; then cyan \"eksctl:\" && eksctl version ; else yellow \"No EKSCtl\"; echo; fi;
-if command -v aws > /dev/null 2>&1; then cyan \"AWS_CLI:\" && /usr/local/bin/aws --version; else yellow \"AWS CLI\"; echo; fi;
+if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
+if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
+if command -v ansible > /dev/null 2>&1; then cyan \"ansible:\" && ansible --version; else yellow \"No Ansible\"; echo; fi;
 '"
+
+$NTP_SYNC = <<EOF
+echo '#!/bin/bash
+
+if ! ntpstat > /dev/null 2>&1
+   then service ntp stop && ntpdate time.nist.gov && service ntp start
+   ntp_tries=15 && ntp_delay_seconds=2 && i=0
+   while ! ntpstat
+     do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1`
+     if [ ${i} -ge ${ntp_tries} ]
+       then yellow "NTP:" && echo bailing && break
+     fi
+   done
+fi' > /etc/init.d/ntpsync.sh \
+   && chmod 755 /etc/init.d/ntpsync.sh \
+   && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
+EOF
 
 $NTP_SYNC_BASHRC = <<EOF
 #{BASHRC}  >> /root/.bashrc
@@ -110,48 +115,101 @@ cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
 && chmod 755 /etc/init/synchosts.sh
 EOF
 
+ANSIBLE = 'echo ' + msg("Doing Ansible")+'
+   sudo apt-add-repository --yes --update ppa:ansible/ansible\
+   && sudo apt-get -y install ansible'
+
+AWSCLI = 'echo ' + msg("Doing AWS CLI")+'
+if ! command -v curl > /dev/null; then sudo apt-get -y -qq install curl; fi
+if ! command -v unzip > /dev/null; then sudo apt-get -y -qq install unzip; fi
+curl -s https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip\
+   && if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && sudo ./aws/install; else echo "AWS CLI install failed"; fi'
+
+DOCKER = 'echo ' + msg("Doing Docker")+'
+if ! command -v curl > /dev/null; then sudo apt-get -y -qq install curl; fi
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key --keyring /etc/apt/trusted.gpg.d/docker.gpg add - \
+&& sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+&& sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
+&& sudo apt-get -y -qq --allow-unauthenticated install \
+   docker-ce \
+   docker-ce-cli \
+   containerd.io \
+sudo curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose\
+      && sudo chmod +x /usr/local/bin/docker-compose'
+
+K8S = 'echo ' + msg("Doing k8s")+'
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list \
+&& curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - \
+&& sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
+&& sudo apt-get -y -qq install \
+   kubectl \
+   kubelet \
+   kubeadm \
+   kubernetes-cni
+'
+
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+$FIRST = <<EOF
+   #{DOCKER}
+   #{K8S}
+EOF
+$LAST = <<EOF
 
+EOF
 ### CONTROLER ###
    config.vm.define "#{CONTROLER}" do |subconfig|
+      $HOOK = <<-EOF
+         #{ANSIBLE}
+         #{AWSCLI}
+      EOF
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{CONTROLER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
       subconfig.vm.provider "#{PROVIDER}" do |v|
          v.name = "#{VM_NAME_CONTROLER}"
-         #v.memory = 2048
+         v.memory = 2048
       end
+      subconfig.vm.provision "shell", run: "once", inline: $FIRST
       subconfig.vm.provision "shell", run: "once", inline: $GENKEY
       subconfig.vm.provision "shell", run: "once", path: "#{CONTROLER_SCRIPT}"
       subconfig.vm.provision "shell", run: "once", path: "#{ROOT_KEY}"
       subconfig.vm.provision "shell", run: "once", path: "#{VAGRANT_KEY}"
-      subconfig.vm.provision "shell", run: "always", inline: $SYNC_HOSTS_FILE
+      subconfig.vm.provision "shell", run: "once", inline: $SYNC_HOSTS_FILE
       subconfig.vm.provision "shell", run: "once", inline: $NTP_SYNC
       subconfig.vm.provision "shell", run: "once", inline: $NTP_SYNC_BASHRC
+      subconfig.vm.provision "shell", run: "once", inline: $HOOK
+      subconfig.vm.provision "shell", run: "once", inline: $LAST
       subconfig.vm.provision "shell", run: "once", inline: <<-EOF
             date > /etc/vagrant_provisioned_at
             EOF
       PORT = 2400
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
       subconfig.vm.network "private_network", ip: host_ip[0], virtualbox__intnet: "anytownusa"
+      subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
    end
 ### CONTROLER ###
 
 ### MASTER ###
    config.vm.define "#{MASTER}" do |subconfig|
+      $HOOK = <<-EOF
+         #{AWSCLI}
+      EOF
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
       subconfig.vm.provider "#{PROVIDER}" do |v|
          v.name = "#{VM_NAME_MASTER}"
-         #v.memory = 2048
+         v.memory = 2048
       end
+      subconfig.vm.provision "shell", run: "once", inline: $FIRST
       subconfig.vm.provision "shell", run: "once", inline: $GENKEY
       subconfig.vm.provision "shell", run: "once", path: "#{MASTER_SCRIPT}"
       subconfig.vm.provision "shell", run: "once", path: "#{ROOT_KEY}"
       subconfig.vm.provision "shell", run: "once", path: "#{VAGRANT_KEY}"
-      subconfig.vm.provision "shell", run: "always", inline: $SYNC_HOSTS_FILE
+      subconfig.vm.provision "shell", run: "once", inline: $SYNC_HOSTS_FILE
       subconfig.vm.provision "shell", run: "once", inline: $NTP_SYNC
       subconfig.vm.provision "shell", run: "once", inline: $NTP_SYNC_BASHRC
+      subconfig.vm.provision "shell", run: "once", inline: $HOOK
+      subconfig.vm.provision "shell", run: "once", inline: $LAST
       subconfig.vm.provision "shell", run: "once", inline: <<-EOF
             date > /etc/vagrant_provisioned_at
             EOF
@@ -164,19 +222,25 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 ### NODES ###
    (1..node_ip.length()).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
+         $HOOK = <<-EOF
+
+         EOF
          subconfig.vm.box = "#{IMAGE}"
          subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
          subconfig.vm.provider "#{PROVIDER}" do |v|
            v.name = "#{VM_NAME_NODE}#{i}"
            #v.memory = 2048
          end
+         subconfig.vm.provision "shell", run: "once", inline: $FIRST
          subconfig.vm.provision "shell", run: "once", inline: $GENKEY
          subconfig.vm.provision "shell", run: "once", path: "#{NODE_SCRIPT}"
          subconfig.vm.provision "shell", run: "once", path: "#{ROOT_KEY}"
          subconfig.vm.provision "shell", run: "once", path: "#{VAGRANT_KEY}"
-         subconfig.vm.provision "shell", run: "always", inline: $SYNC_HOSTS_FILE
+         subconfig.vm.provision "shell", run: "once", inline: $SYNC_HOSTS_FILE
          subconfig.vm.provision "shell", run: "once", inline: $NTP_SYNC
          subconfig.vm.provision "shell", run: "once", inline: $NTP_SYNC_BASHRC
+         subconfig.vm.provision "shell", run: "once", inline: $HOOK
+         subconfig.vm.provision "shell", run: "once", inline: $LAST
          subconfig.vm.provision "shell", run: "once", inline: <<-EOF
                date > /etc/vagrant_provisioned_at
                EOF

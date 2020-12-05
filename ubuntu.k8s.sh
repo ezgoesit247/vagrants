@@ -18,31 +18,4 @@ sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
 && if [ ${i} -ge ${ntp_tries} ]; then echo -n "NTP:" && echo bailing && break; fi \
 done \
 \
-&& echo "Adding Docker..." \
-\
-&& curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key --keyring /etc/apt/trusted.gpg.d/docker.gpg add - \
-&& sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-\
-&& echo "Installing Docker..." \
-\
-&& sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
-&& sudo apt-get -y -qq --allow-unauthenticated install \
-   docker-ce \
-   docker-ce-cli \
-   containerd.io \
-\
-&& echo "Adding k8s..." \
-\
-&& echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list \
-&& curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - \
-\
-&& echo "Installing k8s..." \
-\
-&& sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
-&& sudo apt-get -y -qq install \
-   kubectl \
-   kubelet \
-   kubeadm \
-   kubernetes-cni \
-   \
 && echo "Done..."
