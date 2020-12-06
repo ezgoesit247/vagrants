@@ -1,7 +1,8 @@
 Vagrantfile
 empty.sh
-master.sh
-node.sh
+controller-test.sh
+master-test.sh
+node-test.sh
 root_key.sh
 simple.sh
 sync.hosts.sh

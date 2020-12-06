@@ -2,11 +2,12 @@
 
 # k8s-cluster-test
 ###HARD LINK
-ln ../k8s-cluster/Vagrantfile ./Vagrantfile
+ln ../k8s-cluster/Vagrantfile ./Vagrantfile 2> /dev/null
 
 ln -sfn ../k8s-cluster/empty.sh ./empty.sh
-ln -sfn ../k8s-cluster/master.sh ./master.sh
-ln -sfn ../k8s-cluster/node.sh ./node.sh
+ln -sfn ../k8s-cluster/controller.sh ./controller-test.sh
+ln -sfn ../k8s-cluster/master.sh ./master-test.sh
+ln -sfn ../k8s-cluster/node.sh ./node-test.sh
 ln -sfn ../k8s-cluster/root_key.sh ./root_key.sh
 ln -sfn ../k8s-cluster/simple.sh ./simple.sh
 ln -sfn ../k8s-cluster/sync.hosts.sh ./sync.hosts.sh

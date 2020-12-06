@@ -1,6 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+### SET THIS TO -test (DASH TEST) TO ENABLE TEST MODE ###
 TEST=""
 INTERACTIVE = true
 PURPOSE = "k8s-cluster#{TEST}"
@@ -28,63 +29,22 @@ NODE = "node"
 HOSTNAME_NODE = "#{NODE}.#{LIFECYCLE}.#{DOMAIN}"
 VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}_#{NODE}"
 
+VAGRANTFILE_API_VERSION = "2"
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
 IPLIST = ""
-admin_ip = ['10.250.0.10','10.250.0.20']
-node_ip = ['10.250.0.51','10.250.0.52']
+admin_ip = ['128.1.0.10','128.1.0.20']
+node_ip = ['128.1.1.2','128.1.1.3','128.1.1.4','128.1.1.5','128.1.1.6','128.1.1.7','128.1.1.8','128.1.1.9','128.1.1.10']
 host_ip = admin_ip + node_ip
 host_ip.each do |ip| IPLIST+="#{ip} " end
 
-def msg(message)
-   if INTERACTIVE
-      return "%%%%%%%%%%%%%%% ******* *** ***    #{message}    *** *** *******  %%%%%%%%%%%%%%%"
-   end
-   return "%%%%%%%%%%%%%%% ******* *** ***    #{message}    *** *** *******  %%%%%%%%%%%%%%%"
-#   return "echo export DEBIAN_FRONTEND=noninteractive"
-end
-
-BASHRC = "echo '
-function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
-function green  { color 4 2 \"${*}\"; }
-function yellow { color 0 3 \"${*}\"; }
-function red { color 0 1 \"${*}\"; }
-function blue   { color 6 4 \"${*}\"; }
-function cyan   { color 4 6 \"${*}\"; }
-function grey   { color 0 7 \"${*}\"; }
-function pass   { echo \"$(green PASS: ${*})\"; echo; }
-function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
-function fail   { echo \"$(red FAIL: ${*})\"; echo; }
-function info   { echo \"$(grey INFO: ${*})\"; echo; }
-grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
-#echo \"NTP sync...\"
-#if command -v ntpstat; then
-#   ntp_tries=15 && ntp_delay_seconds=2 && i=0
-#   while ! ntpstat 2> /dev/null
-#     do sleep \${ntp_delay_seconds} && i=\`expr ${i} + 1\`
-#     if [ \${i} -ge \${ntp_tries} ]
-#       then yellow \"NTP:\" && echo bailing && break
-#     fi
-#   done
-#   if ntpstat > /dev/null 2>&1
-#      then green \"NTP Synchronization Status:\" && ntpstat
-#      else red \"NTP:\" && echo \"not synchronized\"
-#   fi
-#fi
-
-if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; echo; fi;
-if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
-if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
-if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
-if command -v eksctl > /dev/null 2>&1; then cyan \"eksctl:\" && eksctl version ; else yellow \"No EKSCtl\"; echo; fi;
-if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
-if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; else yellow \"No Docker Compose\"; echo; fi;
-if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
-if command -v ansible > /dev/null 2>&1; then cyan \"ansible:\" && ansible --version; else yellow \"No Ansible\"; echo; fi;
-'"
-
 $WRITE_ADMIN_SCRIPTS = <<EOF
-   if [ ! -f  ]; then echo '#!/bin/bash
-   for ip in 10.250.0.10 10.250.0.20 10.250.0.51 10.250.0.52; do ssh root@${ip} "${1}"; done
-'
+echo '#!/bin/bash
+if [ $# -gt 0 ]; then for ip in #{IPLIST}; do ssh root@${ip} "${1}"; done;
+else echo " Usage: Need argument to send"; fi
+
+' > /bin/run-ssh
+chmod 774 /bin/run-ssh
 EOF
 
 $SYNC_HOSTS_FILE = <<EOF
@@ -114,22 +74,136 @@ if ! ntpstat > /dev/null 2>&1
    done
 fi' > /etc/init.d/ntpsync.sh \
    && chmod 755 /etc/init.d/ntpsync.sh \
-   && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync \
-   && echo 'echo "NTP sync..."
-   if command -v ntpstat > /dev/null 2>&1; then
-      ntp_tries=15 && ntp_delay_seconds=2 && i=0
-      while ! ntpstat 2> /dev/null
-        do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1`
-        if [ ${i} -ge ${ntp_tries} ]
-          then yellow "NTP:" && echo bailing && break
-        fi
-      done
-      if ntpstat > /dev/null 2>&1
-         then green "NTP Synchronization Status:" && ntpstat
-         else red "NTP:" && echo "not synchronized"
-      fi
-   fi' >> .bashrc
+   && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
 EOF
+
+$FIRST = <<EOF
+   sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade
+   #{PYTHON}
+EOF
+
+$GENKEY = <<EOF
+ssh-keygen -t rsa -b 4096 -f "/root/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
+ssh-keygen -t rsa -b 4096 -f "/home/vagrant/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
+EOF
+
+$LAST = $SYNC_HOSTS_FILE + $WRITE_ADMIN_SCRIPTS + <<-EOF
+   #{BASHRC}  >> /etc/bash.bashrc
+EOF
+
+### CONTROLER ###
+   config.vm.define "#{CONTROLER}" do |subconfig|
+      $HOOK = $NTP_SYNC + <<-EOF
+         #{NTP}
+         #{AWSCLI}
+      EOF
+      subconfig.vm.box = "#{IMAGE}"
+      subconfig.vm.hostname = "#{CONTROLER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.provider "#{PROVIDER}" do |v|
+         v.name = "#{VM_NAME_CONTROLER}"
+         v.memory = 1024
+      end
+      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+      subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
+      subconfig.vm.provision "#{CONTROLER}", type: "shell", run: "once", name: "#{CONTROLER}", path: "#{CONTROLER_SCRIPT}"
+      subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
+      subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
+      subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
+            date > /etc/vagrant_provisioned_at
+            EOF
+      PORT = 2400
+      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+      subconfig.vm.network "private_network", ip: host_ip[0], netmask: 20, virtualbox__intnet: "anytownusa"
+      subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
+   end
+### CONTROLER ###
+
+### MASTER ###
+   config.vm.define "#{MASTER}" do |subconfig|
+      $HOOK = $NTP_SYNC + <<-EOF
+         #{NTP}
+         #{DOCKER}
+         #{DOCKERCOMPOSE}
+         #{K8S}
+         #{KUBECTL}
+      EOF
+      subconfig.vm.box = "#{IMAGE}"
+      subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.provider "#{PROVIDER}" do |v|
+         v.name = "#{VM_NAME_MASTER}"
+         v.memory = 2048
+      end
+      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+      subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
+      subconfig.vm.provision "#{MASTER}", type: "shell", run: "once", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
+      subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
+      subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+      subconfig.vm.provision "last", type: "shell", run: "once", name: "last", inline: $LAST
+      subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
+            date > /etc/vagrant_provisioned_at
+            EOF
+      PORT = 2300
+      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+      subconfig.vm.network "private_network", ip: host_ip[1], netmask: 20, virtualbox__intnet: "anytownusa"
+   end
+### MASTER ###
+
+### NODES ###
+   (1..node_ip.length()).each do |i|
+      config.vm.define "#{NODE}#{i}" do |subconfig|
+         $HOOK = <<-EOF
+            #{DOCKER}
+            #{K8S}
+         EOF
+         subconfig.vm.box = "#{IMAGE}"
+         subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+         subconfig.vm.provider "#{PROVIDER}" do |v|
+           v.name = "#{VM_NAME_NODE}#{i}"
+           v.memory = 2048
+         end
+         subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+         subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
+         subconfig.vm.provision "#{NODE}#{i}", type: "shell", run: "once", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
+         subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
+         subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+         subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+         subconfig.vm.provision "last", type: "shell", run: "once", name: "Last", inline: $LAST
+         subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
+               date > /etc/vagrant_provisioned_at
+               EOF
+         PORT = 2300 + i
+         subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+         ndx = i - 1
+         subconfig.vm.network "private_network", ip: node_ip[ndx], netmask: 20, virtualbox__intnet: "anytownusa"
+      end
+   end
+### NODES ###
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  # config.vm.provision "shell", inline: <<-SHELL
+  #   apt-get update
+  #   apt-get install -y apache2
+  # SHELL
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  # config.vm.box_check_update = false
+
+end
+
+def msg(message)
+   if INTERACTIVE
+      return "%%%%%%%%%%%%%%% ******** %%%%% ******** #{message} ******** %%%%% ******* %%%%%%%%%%%%%%%"
+   end
+   return "%%%%%%%%%%%%%%% ******** %%%%% ******** #{message} ******** %%%%% ******* %%%%%%%%%%%%%%%"
+#   return "echo export DEBIAN_FRONTEND=noninteractive"
+end
 
 NTP = 'echo ' + msg("Doing NTP")+'
 sudo apt-get -y -qq install ntp ntpdate ntpstat \
@@ -138,10 +212,8 @@ sudo apt-get -y -qq install ntp ntpdate ntpstat \
    && sudo ntpdate time.nist.gov && sudo service ntp start \
    && ntp_tries=10 && ntp_delay_seconds=3 && i=0 \
    && while ! ntpstat; do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1` \
-   &&    if [ ${i} -ge ${ntp_tries} ]; then echo -n "NTP:" && echo bailing && break; fi \
-   done \
-'
-   + $NTP_SYNC
+   &&    if [ ${i} -ge ${ntp_tries} ]; \
+            then echo -n "NTP:" && echo bailing && break; fi; done'
 
 PYTHON = 'echo ' + msg("Doing Python")+'
 sudo apt-get -y -qq install python3 \
@@ -156,7 +228,7 @@ AWSCLI = 'echo ' + msg("Doing AWS CLI")+'
 if ! command -v curl > /dev/null; then sudo apt-get -y -qq install curl; fi
 if ! command -v unzip > /dev/null; then sudo apt-get -y -qq install unzip; fi
 curl -s https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip\
-   && if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && sudo ./aws/install; else echo "AWS CLI install failed"; fi'
+   && if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && sudo ./aws/install; else sudo ./aws/install --update; fi'
 
 DOCKER = 'echo ' + msg("Doing Docker")+'
 if ! command -v curl > /dev/null; then sudo apt-get -y -qq install curl; fi
@@ -190,127 +262,42 @@ KUBECTL = 'echo ' + msg("Doing kubectl")+'
 sudo apt-get -y -qq install \
    kubectl'
 
-VAGRANTFILE_API_VERSION = "2"
-Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+BASHRC = "echo '
+function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
+function green  { color 4 2 \"${*}\"; }
+function yellow { color 0 3 \"${*}\"; }
+function red { color 0 1 \"${*}\"; }
+function blue   { color 6 4 \"${*}\"; }
+function cyan   { color 4 6 \"${*}\"; }
+function grey   { color 0 7 \"${*}\"; }
+function pass   { echo \"$(green PASS: ${*})\"; echo; }
+function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
+function fail   { echo \"$(red FAIL: ${*})\"; echo; }
+function info   { echo \"$(grey INFO: ${*})\"; echo; }
+grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
 
-$FIRST = <<EOF
-   sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade
-   #{PYTHON}
-EOF
+if systemctl --all --type service | grep -q ntp.service; then
+   echo \"NTP sync...\"
+   if command -v ntpstat > /dev/null 2>&1; then
+      ntp_tries=15 && ntp_delay_seconds=2 && i=0
+      while ! ntpstat 2> /dev/null
+        do sleep \${ntp_delay_seconds} && i=\`expr \${i} + 1\`
+        if [ \${i} -ge \${ntp_tries} ]
+          then yellow \"NTP:\" && echo bailing && break
+        fi
+      done
+      if ntpstat > /dev/null 2>&1
+         then green \"NTP Synchronization Status:\" && ntpstat
+         else red \"NTP:\" && echo \"not synchronized\"
+      fi
+   fi
+fi
 
-$GENKEY = <<EOF
-ssh-keygen -t rsa -b 4096 -f "/root/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
-ssh-keygen -t rsa -b 4096 -f "/home/vagrant/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
-EOF
-
-$LAST = $SYNC_HOSTS_FILE + <<-EOF
-   #{BASHRC}  >> /root/.bashrc
-   #{BASHRC}  >> /home/vagrant/.bashrc
-EOF
-
-### CONTROLER ###
-   config.vm.define "#{CONTROLER}" do |subconfig|
-      $HOOK = <<-EOF
-         #{NTP}
-         #{AWSCLI}
-      EOF
-      subconfig.vm.box = "#{IMAGE}"
-      subconfig.vm.hostname = "#{CONTROLER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
-      subconfig.vm.provider "#{PROVIDER}" do |v|
-         v.name = "#{VM_NAME_CONTROLER}"
-         v.memory = 1024
-      end
-      subconfig.vm.provision "shell", name: "First", inline: $FIRST
-      subconfig.vm.provision "shell", name: "GenKey", inline: $GENKEY
-      subconfig.vm.provision "shell", name: "#{CONTROLER}", path: "#{CONTROLER_SCRIPT}"
-      subconfig.vm.provision "shell", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
-      subconfig.vm.provision "shell", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
-      subconfig.vm.provision "shell", name: "Hook", inline: $HOOK
-      subconfig.vm.provision "shell", name: "Last", inline: $LAST
-      subconfig.vm.provision "shell", name:"Inline", inline: <<-EOF
-            date > /etc/vagrant_provisioned_at
-            EOF
-      PORT = 2400
-      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip[0], virtualbox__intnet: "anytownusa"
-      subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
-   end
-### CONTROLER ###
-
-### MASTER ###
-   config.vm.define "#{MASTER}" do |subconfig|
-      $HOOK = <<-EOF
-         #{NTP}
-         #{DOCKER}
-         #{DOCKERCOMPOSE}
-         #{K8S}
-         #{KUBECTL}
-      EOF
-      subconfig.vm.box = "#{IMAGE}"
-      subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
-      subconfig.vm.provider "#{PROVIDER}" do |v|
-         v.name = "#{VM_NAME_MASTER}"
-         v.memory = 1024
-      end
-      subconfig.vm.provision "shell", name: "First", inline: $FIRST
-      subconfig.vm.provision "shell", name: "GenKey", inline: $GENKEY
-      subconfig.vm.provision "shell", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
-      subconfig.vm.provision "shell", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
-      subconfig.vm.provision "shell", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
-      subconfig.vm.provision "shell", name: "Hook", inline: $HOOK
-      subconfig.vm.provision "shell", name: "last", inline: $LAST
-      subconfig.vm.provision "shell", name:"Inline", inline: <<-EOF
-            date > /etc/vagrant_provisioned_at
-            EOF
-      PORT = 2300
-      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip[1], virtualbox__intnet: "anytownusa"
-   end
-### MASTER ###
-
-### NODES ###
-   (1..node_ip.length()).each do |i|
-      config.vm.define "#{NODE}#{i}" do |subconfig|
-         $HOOK = <<-EOF
-            #{NTP}
-            #{DOCKER}
-            #{K8S}
-         EOF
-         subconfig.vm.box = "#{IMAGE}"
-         subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
-         subconfig.vm.provider "#{PROVIDER}" do |v|
-           v.name = "#{VM_NAME_NODE}#{i}"
-           v.memory = 2048
-         end
-         subconfig.vm.provision "shell", name: "First", inline: $FIRST
-         subconfig.vm.provision "shell", name: "GenKey", inline: $GENKEY
-         subconfig.vm.provision "shell", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
-         subconfig.vm.provision "shell", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
-         subconfig.vm.provision "shell", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
-         subconfig.vm.provision "shell", name: "Hook", inline: $HOOK
-         subconfig.vm.provision "shell", name: "Last", inline: $LAST
-         subconfig.vm.provision "shell", name:"Inline", inline: <<-EOF
-               date > /etc/vagrant_provisioned_at
-               EOF
-         PORT = 2300 + i
-         subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-         ndx = i - 1
-         subconfig.vm.network "private_network", ip: node_ip[ndx], virtualbox__intnet: "anytownusa"
-      end
-   end
-### NODES ###
-
-  # Enable provisioning with a shell script. Additional provisioners such as
-  # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
-  # documentation for more information about their specific syntax and use.
-  # config.vm.provision "shell", inline: <<-SHELL
-  #   apt-get update
-  #   apt-get install -y apache2
-  # SHELL
-
-  # Disable automatic box update checking. If you disable this, then
-  # boxes will only be checked for updates when the user runs
-  # `vagrant box outdated`. This is not recommended.
-  # config.vm.box_check_update = false
-
-end
+if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; echo; fi;
+if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
+if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
+if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
+if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
+if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; else yellow \"No Docker Compose\"; echo; fi;
+if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
+'"
