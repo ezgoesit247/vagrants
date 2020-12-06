@@ -46,6 +46,10 @@ else echo " Usage: Need argument to send"; fi
 ' > /bin/run-ssh
 chmod 774 /bin/run-ssh
 EOF
+#ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
+#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
+#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
+
 
 $SYNC_HOSTS_FILE = <<EOF
 if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
@@ -141,7 +145,7 @@ EOF
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
-      subconfig.vm.provision "last", type: "shell", run: "once", name: "last", inline: $LAST
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "last", inline: $LAST
       subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
             date > /etc/vagrant_provisioned_at
             EOF
@@ -170,7 +174,7 @@ EOF
          subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
          subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
          subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
-         subconfig.vm.provision "last", type: "shell", run: "once", name: "Last", inline: $LAST
+         subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
          subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
                date > /etc/vagrant_provisioned_at
                EOF
