@@ -178,6 +178,7 @@ EOF
          subconfig.vm.provider "#{PROVIDER}" do |v|
            v.name = "#{VM_NAME_NODE}#{i}"
            v.memory = 1024
+           v.cpus = 2
          end
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
