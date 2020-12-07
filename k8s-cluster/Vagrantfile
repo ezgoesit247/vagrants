@@ -59,7 +59,6 @@ EOF
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
 
-
 $SYNC_HOSTS_FILE = <<EOF
 if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
 echo '#!/bin/bash
@@ -148,6 +147,7 @@ EOF
       subconfig.vm.provider "#{PROVIDER}" do |v|
          v.name = "#{VM_NAME_MASTER}"
          v.memory = 2048
+         v.cpus = 2
       end
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
