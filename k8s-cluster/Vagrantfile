@@ -57,7 +57,20 @@ echo -e "#{NAMELIST}" >> /etc/hosts
 EOF
 #ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
-#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
+#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~vagrant/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
+
+#// MASTER AS VAGRANT
+#sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
+#mkdir -p $HOME/.kube
+#sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+#sudo chown $(id -u):$(id -g) $HOME/.kube/config
+#kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
+#kubeadm token create --print-join-command > ./joincluster.sh
+#sudo mv ./joincluster.sh /joincluster.sh
+
+#// WORKER AS ROOT
+#apt-get  install -y sshpass >/dev/null 2>&1
+#scp -o StrictHostKeyChecking=no master.k8s-cluster.dev.anytown.usa:/joincluster.sh /joincluster.sh
 
 $SYNC_HOSTS_FILE = <<EOF
 if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
@@ -176,9 +189,9 @@ EOF
          subconfig.vm.box = "#{IMAGE}"
          subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
          subconfig.vm.provider "#{PROVIDER}" do |v|
-           v.name = "#{VM_NAME_NODE}#{i}"
-           v.memory = 1024
-           v.cpus = 2
+            v.name = "#{VM_NAME_NODE}#{i}"
+            v.memory = 1024
+            v.cpus = 2
          end
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
