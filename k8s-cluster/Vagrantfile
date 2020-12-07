@@ -28,34 +28,58 @@ NODE = "node"
 VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}_#{NODE}"
 
 VAGRANTFILE_API_VERSION = "2"
+
+### START Vagrant.configure ###
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
 IPLIST = ""
 NAMELIST = ""
+NETMASK = 27
 
-admin_ip = ['128.1.0.10','128.1.0.20']
+admin_ip = ['192.168.0.10','192.168.0.20']
 admin_nm = ['controller','master'    ]
 
-node_ip = ['128.1.1.2','128.1.1.3','128.1.1.4','128.1.1.5','128.1.1.6','128.1.1.7','128.1.1.8','128.1.1.9','128.1.1.10']
-node_nm = ['node1',    'node2',    'node3',    'node4',    'node5',    'node6',    'node7',    'node8',    'node9'     ]
+node_ip = ['192.168.0.2','192.168.0.3','192.168.0.4','192.168.0.5','192.168.0.6','192.168.0.7','192.168.0.8','192.168.0.9']
+node_nm = ['node1',      'node2',      'node3',      'node4',      'node5',      'node6',      'node7',      'node8',     ]
 
 host_ip = admin_ip + node_ip
 host_nm = admin_nm + node_nm
 host_ip.each do |ip| IPLIST+="#{ip} " end
 for i in (0..host_nm.length()-1) do NAMELIST += "\n#{host_ip[i]} #{host_nm[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} #{host_nm[i]}" end
 
-$WRITE_ADMIN_SCRIPTS = <<EOF
-echo '#!/bin/bash
-if [ $# -gt 0 ]; then for ip in #{IPLIST}; do ssh root@${ip} "${1}"; done;
-else echo " Usage: Need argument to send"; fi
-
+# WRITES:   /bin/run-ssh
+$RUN_SSH = "echo '#!/bin/bash
+if [ $# -gt 0 ]; then for ip in #{IPLIST}; do ssh root@${ip} \"${1}\"; done;
+else echo \" Usage: Need argument to send\"; fi
 ' > /bin/run-ssh
 chmod 774 /bin/run-ssh
-echo -e "#{NAMELIST}" >> /etc/hosts
+"
+
+# ADDS:     /etc/hosts
+$ETC_HOSTS = "echo -e '#{NAMELIST}' >> /etc/hosts
+"
+
+# WRITES:   .ssh/known_hosts
+# WRITES:   /etc/init/synchosts.sh
+$SYNC_KNOWN_HOSTS = <<EOF
+if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
+echo '#!/bin/bash
+> /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
+for ip in #{IPLIST}; do
+ssh-keyscan -H ${ip} > /root/.ssh/known_hosts; done
+cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
+   && chown vagrant:vagrant /home/vagrant/.ssh/known_hosts \
+   && chmod 600 /home/vagrant/.ssh/known_hosts
+' > /etc/init/synchosts.sh \
+&& chmod 755 /etc/init/synchosts.sh
 EOF
+
 #ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~vagrant/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
+
+#s="" && f="" && sed -i 's/128\.1\.[0,1]/192\.168\.0/' ${f} && x=`grep -n ${s} ${f}| cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x + 1` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak`
+#s="127.0.2.1" && run-ssh 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n ${z} /etc/hosts.bak`'
 
 #// MASTER AS VAGRANT
 #sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
@@ -70,19 +94,8 @@ EOF
 #apt-get  install -y sshpass >/dev/null 2>&1
 #scp -o StrictHostKeyChecking=no master.k8s-cluster.dev.anytown.usa:/joincluster.sh /joincluster.sh
 
-$SYNC_HOSTS_FILE = <<EOF
-if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
-echo '#!/bin/bash
-> /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
-for ip in #{IPLIST}; do
-ssh-keyscan -H ${ip} >> /root/.ssh/known_hosts; done
-cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
-   && chown vagrant:vagrant /home/vagrant/.ssh/known_hosts \
-   && chmod 600 /home/vagrant/.ssh/known_hosts
-' > /etc/init/synchosts.sh \
-&& chmod 755 /etc/init/synchosts.sh
-EOF
-
+# WRITES:   /etc/init.d/ntpsync.sh
+# LINKS:    /etc/rc3.d/S01ntpsync
 $NTP_SYNC = <<EOF
 echo '#!/bin/bash
 
@@ -100,19 +113,21 @@ fi' > /etc/init.d/ntpsync.sh \
    && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
 EOF
 
-$FIRST = <<EOF
-   sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade
-   #{PYTHON}
-EOF
-
 $GENKEY = <<EOF
 ssh-keygen -t rsa -b 4096 -f "/root/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
 ssh-keygen -t rsa -b 4096 -f "/home/vagrant/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
 EOF
 
-$LAST = $SYNC_HOSTS_FILE + $WRITE_ADMIN_SCRIPTS + <<-EOF
+$FIRST = <<EOF
+   sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade
+   #{PYTHON}
+EOF
+
+$LAST = $ETC_HOSTS + $SYNC_KNOWN_HOSTS + $RUN_SSH + <<-EOF
    #{BASHRC}  >> /etc/bash.bashrc
 EOF
+
+$ADHOC = ""
 
 ### CONTROLER ###
    config.vm.define "#{CONTROLER}" do |subconfig|
@@ -126,7 +141,7 @@ EOF
          v.name = "#{VM_NAME_CONTROLER}"
          v.memory = 1024
       end
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
       subconfig.vm.provision "#{CONTROLER}", type: "shell", run: "once", name: "#{CONTROLER}", path: "#{CONTROLER_SCRIPT}"
@@ -139,12 +154,21 @@ EOF
             EOF
       PORT = 2400
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip[0], netmask: 20, virtualbox__intnet: "anytownusa"
+      subconfig.vm.network "private_network", ip: host_ip[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
    end
 ### CONTROLER ###
 
 ### MASTER ###
+      $CLUSTER = <<-EOF
+kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
+mkdir /home/vagrant/.kube
+cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+chown -R vagrant:vagrant /home/vagrant/.kube
+su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
+kubeadm token create --print-join-command > /joincluster.sh
+sudo mv ./joincluster.sh /joincluster.sh
+      EOF
    config.vm.define "#{MASTER}" do |subconfig|
       $HOOK = $NTP_SYNC + <<-EOF
          #{NTP}
@@ -160,7 +184,8 @@ EOF
          v.memory = 2048
          v.cpus = 2
       end
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
+      subconfig.vm.provision "Cluster", type: "shell", run: "never", name: "Cluster", inline: $CLUSTER
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
       subconfig.vm.provision "#{MASTER}", type: "shell", run: "once", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
@@ -173,15 +198,15 @@ EOF
             EOF
       PORT = 2300
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip[1], netmask: 20, virtualbox__intnet: "anytownusa"
+      subconfig.vm.network "private_network", ip: host_ip[1], netmask: NETMASK, virtualbox__intnet: "anytownusa"
    end
 ### MASTER ###
 
+### NODES ###
    $JOIN = <<-EOF
 scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /joincluster.sh
 /bin/bash /joincluster.sh
    EOF
-### NODES ###
    (1..node_ip.length()).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
          $HOOK = <<-EOF
@@ -195,7 +220,7 @@ scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /
             v.memory = 1024
             v.cpus = 2
          end
-         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
          subconfig.vm.provision "Join", type: "shell", run: "never", name: "Join", inline: $JOIN
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
          subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
@@ -210,7 +235,7 @@ scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /
          PORT = 2300 + i
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
          ndx = i - 1
-         subconfig.vm.network "private_network", ip: node_ip[ndx], netmask: 20, virtualbox__intnet: "anytownusa"
+         subconfig.vm.network "private_network", ip: node_ip[ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       end
    end
 ### NODES ###
@@ -229,6 +254,7 @@ scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /
   # config.vm.box_check_update = false
 
 end
+###
 
 def msg(message)
    if INTERACTIVE
@@ -237,6 +263,7 @@ def msg(message)
    return "%%%%%%%%%%%%%%% ******** %%%%% ******** #{message} ******** %%%%% ******* %%%%%%%%%%%%%%%"
 #   return "echo export DEBIAN_FRONTEND=noninteractive"
 end
+### END Vagrant.configure ###
 
 NTP = 'echo ' + msg("Doing NTP")+'
 sudo apt-get -y -qq install ntp ntpdate ntpstat \
