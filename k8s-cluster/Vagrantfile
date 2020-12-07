@@ -34,6 +34,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
 IPLIST = ""
 NAMELIST = ""
+ETC_HOSTS = ""
 NETMASK = 27
 
 admin_ip = ['192.168.0.10','192.168.0.20']
@@ -45,7 +46,7 @@ node_nm = ['node1',      'node2',      'node3',      'node4',      'node5',     
 host_ip = admin_ip + node_ip
 host_nm = admin_nm + node_nm
 host_ip.each do |ip| IPLIST+="#{ip} " end
-for i in (0..host_nm.length()-1) do NAMELIST += "\n#{host_ip[i]} #{host_nm[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} #{host_nm[i]}" end
+for i in (0..host_nm.length()-1) do NAMELIST += "#{host_nm[i]} "; ETC_HOSTS += "\n#{host_ip[i]} #{host_nm[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} #{host_nm[i]}" end
 
 # WRITES:   /bin/run-ssh
 $RUN_SSH = "echo '#!/bin/bash
@@ -56,17 +57,18 @@ chmod 774 /bin/run-ssh
 "
 
 # ADDS:     /etc/hosts
-$ETC_HOSTS = "echo -e '#{NAMELIST}' >> /etc/hosts
+$ETC_HOSTS = "echo -e '#{ETC_HOSTS}' >> /etc/hosts
 "
 
-# WRITES:   .ssh/known_hosts
 # WRITES:   /etc/init/synchosts.sh
-$SYNC_KNOWN_HOSTS = <<EOF
+$ETC_INIT_SYNCHOSTS = <<EOF
 if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
 echo '#!/bin/bash
 > /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
 for ip in #{IPLIST}; do
-ssh-keyscan -H ${ip} > /root/.ssh/known_hosts; done
+   ssh-keyscan -H ${ip} >> /root/.ssh/known_hosts; done
+for nm in #{NAMELIST}; do
+   ssh-keyscan -H ${nm} >> /root/.ssh/known_hosts; done
 cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
    && chown vagrant:vagrant /home/vagrant/.ssh/known_hosts \
    && chmod 600 /home/vagrant/.ssh/known_hosts
@@ -123,11 +125,11 @@ $FIRST = <<EOF
    #{PYTHON}
 EOF
 
-$LAST = $ETC_HOSTS + $SYNC_KNOWN_HOSTS + $RUN_SSH + <<-EOF
+$LAST = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH + <<-EOF
    #{BASHRC}  >> /etc/bash.bashrc
 EOF
 
-$ADHOC = ""
+$ADHOC = $ETC_INIT_SYNCHOSTS
 
 ### CONTROLER ###
    config.vm.define "#{CONTROLER}" do |subconfig|
