@@ -259,14 +259,22 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key --keyring
    gnupg-agent \
    docker-ce \
    docker-ce-cli \
-   containerd.io'
+   containerd.io \
+&& usermod -aG docker vagrant
+'
 
 DOCKERCOMPOSE = 'echo ' + msg("Doing Docker Compose")+'
 sudo curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
       && sudo chmod +x /usr/local/bin/docker-compose'
 
 K8S = 'echo ' + msg("Doing k8s base")+'
-echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list \
+cat >>/etc/sysctl.d/kubernetes.conf<<EOF &&
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system >/dev/null 2>&1 \
+\
+&& echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list \
 && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - \
 && sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade \
 && sudo apt-get -y -qq install \
