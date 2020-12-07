@@ -177,7 +177,7 @@ EOF
          subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
          subconfig.vm.provider "#{PROVIDER}" do |v|
            v.name = "#{VM_NAME_NODE}#{i}"
-           v.memory = 2048
+           v.memory = 1024
          end
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
