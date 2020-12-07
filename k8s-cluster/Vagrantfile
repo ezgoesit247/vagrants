@@ -16,17 +16,15 @@ VAGRANT_KEY_SCRIPT = "vagrant_key.sh"
 NODE_SCRIPT = "node#{TEST}.sh"
 MASTER_SCRIPT = "master#{TEST}.sh"
 CONTROLER_SCRIPT = "controller#{TEST}.sh"
+HOSTNAME_PREFIX = "#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
 
 CONTROLER = "controller"
-HOSTNAME_CONTROLER = "#{CONTROLER}.#{LIFECYCLE}.#{DOMAIN}"
 VM_NAME_CONTROLER = "#{PURPOSE}_#{LIFECYCLE}_#{CONTROLER}"
 
 MASTER = "master"
-HOSTNAME_MASTER = "#{MASTER}.#{LIFECYCLE}.#{DOMAIN}"
 VM_NAME_MASTER = "#{PURPOSE}_#{LIFECYCLE}_#{MASTER}"
 
 NODE = "node"
-HOSTNAME_NODE = "#{NODE}.#{LIFECYCLE}.#{DOMAIN}"
 VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}_#{NODE}"
 
 VAGRANTFILE_API_VERSION = "2"
@@ -179,6 +177,10 @@ EOF
    end
 ### MASTER ###
 
+   $JOIN = <<-EOF
+scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /joincluster.sh
+/bin/bash /joincluster.sh
+   EOF
 ### NODES ###
    (1..node_ip.length()).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
@@ -194,6 +196,7 @@ EOF
             v.cpus = 2
          end
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+         subconfig.vm.provision "Join", type: "shell", run: "never", name: "Join", inline: $JOIN
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
          subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
          subconfig.vm.provision "#{NODE}#{i}", type: "shell", run: "once", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
