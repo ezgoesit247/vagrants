@@ -16,7 +16,7 @@ VAGRANT_KEY_SCRIPT = "vagrant_key.sh"
 NODE_SCRIPT = "node#{TEST}.sh"
 MASTER_SCRIPT = "master#{TEST}.sh"
 CONTROLER_SCRIPT = "controller#{TEST}.sh"
-HOSTNAME_PREFIX = "#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+HOSTNAME_SUFFIX = "#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
 
 CONTROLER = "controller"
 VM_NAME_CONTROLER = "#{PURPOSE}_#{LIFECYCLE}_#{CONTROLER}"
@@ -34,7 +34,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
 IPLIST = ""
 NAMELIST = ""
+FQDN = ""
 ETC_HOSTS = ""
+POD_NETWORK = "192.168.0.0"
 NETMASK = 27
 
 ### HARD CODED ON PURPOSE -bindia 20201207
@@ -64,6 +66,7 @@ end
 host_ip_pool.each do |ip| IPLIST+="#{ip} " end
 for i in (0..MSTR_NODE_CT+MSTR_NODE_CT+POD_NODE_CT - 1) do
    NAMELIST += "#{host_nm_pool[i]} "
+   FQDN += "#{host_nm_pool[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} "
    ETC_HOSTS += "\n#{host_ip_pool[i]} #{host_nm_pool[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} #{host_nm_pool[i]}"
 end
 
@@ -88,6 +91,8 @@ for ip in #{IPLIST}; do
    ssh-keyscan -H ${ip} >> /root/.ssh/known_hosts; done
 for nm in #{NAMELIST}; do
    ssh-keyscan -H ${nm} >> /root/.ssh/known_hosts; done
+for nm in #{FQDN}; do
+   ssh-keyscan -H ${nm} >> /root/.ssh/known_hosts; done
 cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
    && chown vagrant:vagrant /home/vagrant/.ssh/known_hosts \
    && chmod 600 /home/vagrant/.ssh/known_hosts
@@ -103,6 +108,9 @@ EOF
 
 ### REMOVE ALL LINES BELOW ${s} FROM /ETC/HOSTS
 #s="127.0.2.1" && run-ssh 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts'
+
+#s="127.0.2.1" && x=`grep -n "${s}" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts
+
 
 #// MASTER AS VAGRANT
 #sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
@@ -184,21 +192,24 @@ $ADHOC = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH
 
 ### MASTER ###
    config.vm.define "#{MASTER}" do |subconfig|
-      $HOOK = $NTP_SYNC + <<-EOF
+      # WRITES:   /root/create_k8s_cluster.sh
+      $CREATE_CLUSTER = <<-EOF
+      echo '#!/bin/bash
+kubeadm reset -f && sudo rm -rf ${HOME}/.kube
+rm -rf ~vagrant/.kube
+kubeadm init --apiserver-advertise-address=#{mstr_ip_pool[0]} --pod-network-cidr=#{POD_NETWORK}/#{NETMASK} >> cluster_initialized.txt
+mkdir /home/vagrant/.kube
+cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+chown -R vagrant:vagrant /home/vagrant/.kube
+su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
+kubeadm token create --print-join-command > /joincluster.sh' > /root/create_k8s_cluster.sh
+      EOF
+      $HOOK = $NTP_SYNC + $CREATE_CLUSTER + <<-EOF
          #{NTP}
          #{DOCKER}
          #{DOCKERCOMPOSE}
          #{K8S}
          #{KUBECTL}
-      EOF
-      $CLUSTER = <<-EOF
-         kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
-         mkdir /home/vagrant/.kube
-         cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
-         chown -R vagrant:vagrant /home/vagrant/.kube
-         su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
-         kubeadm token create --print-join-command > /joincluster.sh
-         sudo mv ./joincluster.sh /joincluster.sh
       EOF
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -208,7 +219,7 @@ $ADHOC = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH
          v.cpus = 2
       end
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-      subconfig.vm.provision "Cluster", type: "shell", run: "never", name: "Cluster", inline: $CLUSTER
+      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
       subconfig.vm.provision "#{MASTER}", type: "shell", run: "once", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
@@ -226,15 +237,16 @@ $ADHOC = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH
 ### MASTER ###
 
 ### NODES ###
-   $JOIN = <<-EOF
-scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /joincluster.sh
-/bin/bash /joincluster.sh
-   EOF
    (1..POD_NODE_CT).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
          $HOOK = <<-EOF
             #{DOCKER}
             #{K8S}
+         EOF
+         $JOIN = <<-EOF
+            echo '#!/bin/bash
+scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_SUFFIX}":/joincluster.sh /joincluster.sh
+/bin/bash /joincluster.sh' > /root/join_k8s_cluster.sh
          EOF
          subconfig.vm.box = "#{IMAGE}"
          subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -244,7 +256,7 @@ scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /
             v.cpus = 2
          end
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-         subconfig.vm.provision "Join", type: "shell", run: "never", name: "Join", inline: $JOIN
+         subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
          subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
          subconfig.vm.provision "#{NODE}#{i}", type: "shell", run: "once", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
