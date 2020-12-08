@@ -37,10 +37,10 @@ NAMELIST = ""
 FQDN = ""
 ETC_HOSTS = ""
 POD_NETWORK = "192.168.0.0"
-NETMASK = 27
+NETMASK = 20
 
 ### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 2
+POD_NODE_CT = 3
 MSTR_NODE_CT = 1
 CTLR_NODE_CT = 1
 
@@ -71,7 +71,8 @@ for i in (0..MSTR_NODE_CT+MSTR_NODE_CT+POD_NODE_CT - 1) do
 end
 
 # WRITES:   /bin/run-ssh
-$RUN_SSH = "echo '#!/bin/bash
+$BIN_RUNSSH = "echo #{MSG} Running: \\$BIN_RUNSSH
+echo '#!/bin/bash
 if [ $# -gt 0 ]; then for ip in #{IPLIST}; do ssh root@${ip} \"${1}\"; done;
 else echo \" Usage: Need argument to send\"; fi
 ' > /bin/run-ssh
@@ -79,11 +80,13 @@ chmod 774 /bin/run-ssh
 "
 
 # ADDS:     /etc/hosts
-$ETC_HOSTS = "echo -e '#{ETC_HOSTS}' >> /etc/hosts
+$ETC_HOSTS = "echo #{MSG} Running: \\$ETC_HOSTS
+echo -e '#{ETC_HOSTS}' >> /etc/hosts
 "
 
 # WRITES:   /etc/init/synchosts.sh
 $ETC_INIT_SYNCHOSTS = <<EOF
+echo #{MSG} Running: \\$ETC_INIT_SYNCHOSTS
 if [ ! -d /etc/init ]; then mkdir /etc/init && chmod 755 ${_}; fi
 echo '#!/bin/bash
 > /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
@@ -100,34 +103,10 @@ cp -f /root/.ssh/known_hosts /home/vagrant/.ssh/known_hosts \
 && chmod 755 /etc/init/synchosts.sh
 EOF
 
-#ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
-#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
-#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~vagrant/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
-
-#s="" && f="" && sed -i 's/128\.1\.[0,1]/192\.168\.0/' ${f} && x=`grep -n ${s} ${f}| cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x + 1` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak`
-
-### REMOVE ALL LINES BELOW ${s} FROM /ETC/HOSTS
-#s="127.0.2.1" && run-ssh 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts'
-
-#s="127.0.2.1" && x=`grep -n "${s}" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts
-
-
-#// MASTER AS VAGRANT
-#sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
-#mkdir -p $HOME/.kube
-#sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-#sudo chown $(id -u):$(id -g) $HOME/.kube/config
-#kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
-#kubeadm token create --print-join-command > ./joincluster.sh
-#sudo mv ./joincluster.sh /joincluster.sh
-
-#// WORKER AS ROOT
-#apt-get  install -y sshpass >/dev/null 2>&1
-#scp -o StrictHostKeyChecking=no master.k8s-cluster.dev.anytown.usa:/joincluster.sh /joincluster.sh
-
 # WRITES:   /etc/init.d/ntpsync.sh
 # LINKS:    /etc/rc3.d/S01ntpsync
-$NTP_SYNC = <<EOF
+$ETC_INITD_NTPSYNC = <<EOF
+echo #{MSG} Running: \\$ETC_INITD_NTPSYNC
 echo '#!/bin/bash
 
 if ! ntpstat > /dev/null 2>&1
@@ -144,25 +123,130 @@ fi' > /etc/init.d/ntpsync.sh \
    && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
 EOF
 
+$ETC_BASHRC = <<EOF
+echo #{MSG} Running: \\$ETC_BASHRC
+#{BASHRC}  >> /etc/bash.bashrc
+EOF
+
 $GENKEY = <<EOF
 ssh-keygen -t rsa -b 4096 -f "/root/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
 ssh-keygen -t rsa -b 4096 -f "/home/vagrant/.ssh/provisioned_id_rsa.`openssl rand -hex 12`" -q -N ""
 EOF
 
+### WRITE /ETC/HOSTS VERY EARLY
 $FIRST = <<EOF
-   sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade
+echo -e '#{ETC_HOSTS}' >> /etc/hosts \
+   && echo -e 'added to /etc/hosts: #{ETC_HOSTS}'
+sudo apt-get -y -qq update && sudo apt-get -y -qq upgrade
    #{PYTHON}
 EOF
 
-$LAST = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH + <<-EOF
+$LAST = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH #+ <<-EOF
    #{BASHRC}  >> /etc/bash.bashrc
-EOF
+#EOF
 
-$ADHOC = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH
+$ADHOC = ""
+
+### MASTER ###
+   config.vm.define "#{MASTER}" do |subconfig|
+
+# WRITES:   ~vagrant/create_k8s_cluster.sh
+      $CREATE_CLUSTER = <<-EOF
+echo '#!/bin/bash
+
+#DO AS VAGRANT
+#systemctl status docker
+#systemctl status kubelet
+#if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
+#sudo kubeadm reset -f && sudo rm -rf ~vagrant/.kube
+
+kubeadm init --apiserver-advertise-address=#{mstr_ip_pool[0]} \
+   --pod-network-cidr=#{POD_NETWORK}/#{NETMASK} >> cluster_initialized.txt 2>&1 \
+\
+   && mkdir /home/vagrant/.kube \
+   && cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config \
+   && chown -R vagrant:vagrant /home/vagrant/.kube \
+   && su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml" \
+   && kubeadm token create --print-join-command > /joincluster.sh' > /root/create_k8s_cluster.sh
+/bin/bash /root/create_k8s_cluster.sh > /root/reate_k8s_cluster.log 2>&1
+EOF
+      $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
+         #{NTP}
+         #{DOCKER}
+         #{DOCKERCOMPOSE}
+         #{K8S}
+         #{KUBECTL}
+      EOF
+      subconfig.vm.box = "#{IMAGE}"
+      subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.provider "#{PROVIDER}" do |v|
+         v.name = "#{VM_NAME_MASTER}"
+         v.memory = 2048
+         v.cpus = 2
+      end
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
+      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+      subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
+      subconfig.vm.provision "#{MASTER}", type: "shell", run: "once", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
+      subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
+      subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "last", inline: $LAST
+      subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
+            date >> /etc/vagrant_provisioned_at
+            EOF
+      PORT = 2300
+      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
+      subconfig.vm.network "private_network", ip: host_ip_pool[1], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+   end
+### MASTER ###
+
+### NODES ###
+   (1..POD_NODE_CT).each do |i|
+      config.vm.define "#{NODE}#{i}" do |subconfig|
+         $HOOK = <<-EOF
+            #{DOCKER}
+            #{K8S}
+         EOF
+
+# WRITES:   /root/join_k8s_cluster.sh
+         $JOIN = <<-EOF
+echo '#!/bin/bash
+scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_SUFFIX}":/joincluster.sh /joincluster.sh
+/bin/bash /joincluster.sh' > /root/join_k8s_cluster.sh
+/bin/bash /root/join_k8s_cluster.sh > /root/join_k8s_cluster.log 2>&1
+EOF
+         subconfig.vm.box = "#{IMAGE}"
+         subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+         subconfig.vm.provider "#{PROVIDER}" do |v|
+            v.name = "#{VM_NAME_NODE}#{i}"
+            v.memory = 1024
+            v.cpus = 2
+         end
+         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
+         subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+         subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
+         subconfig.vm.provision "#{NODE}#{i}", type: "shell", run: "once", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
+         subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
+         subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+         subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+         subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
+         subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
+         subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
+               date >> /etc/vagrant_provisioned_at
+               EOF
+         PORT = 2300 + i
+         subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
+         ndx = i - 1
+         subconfig.vm.network "private_network", ip: pod_ip_pool[ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+      end
+   end
+### NODES ###
 
 ### CONTROLER ###
    config.vm.define "#{CONTROLER}" do |subconfig|
-      $HOOK = $NTP_SYNC + <<-EOF
+      $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
          #{AWSCLI}
       EOF
@@ -181,107 +265,14 @@ $ADHOC = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH
       subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
       subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
-            date > /etc/vagrant_provisioned_at
+            date >> /etc/vagrant_provisioned_at
             EOF
       PORT = 2400
-      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
+      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: host_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
-      subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
+      #subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
    end
 ### CONTROLER ###
-
-### MASTER ###
-   config.vm.define "#{MASTER}" do |subconfig|
-      # WRITES:   /root/create_k8s_cluster.sh
-      $CREATE_CLUSTER = <<-EOF
-      echo '#!/bin/bash
-kubeadm reset -f && sudo rm -rf ${HOME}/.kube
-rm -rf ~vagrant/.kube
-kubeadm init --apiserver-advertise-address=#{mstr_ip_pool[0]} --pod-network-cidr=#{POD_NETWORK}/#{NETMASK} >> cluster_initialized.txt
-mkdir /home/vagrant/.kube
-cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
-chown -R vagrant:vagrant /home/vagrant/.kube
-su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
-kubeadm token create --print-join-command > /joincluster.sh' > /root/create_k8s_cluster.sh
-      EOF
-      $HOOK = $NTP_SYNC + $CREATE_CLUSTER + <<-EOF
-         #{NTP}
-         #{DOCKER}
-         #{DOCKERCOMPOSE}
-         #{K8S}
-         #{KUBECTL}
-      EOF
-      subconfig.vm.box = "#{IMAGE}"
-      subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
-      subconfig.vm.provider "#{PROVIDER}" do |v|
-         v.name = "#{VM_NAME_MASTER}"
-         v.memory = 2048
-         v.cpus = 2
-      end
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
-      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
-      subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
-      subconfig.vm.provision "#{MASTER}", type: "shell", run: "once", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
-      subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
-      subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
-      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
-      subconfig.vm.provision "Last", type: "shell", run: "once", name: "last", inline: $LAST
-      subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
-            date > /etc/vagrant_provisioned_at
-            EOF
-      PORT = 2300
-      subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip_pool[1], netmask: NETMASK, virtualbox__intnet: "anytownusa"
-   end
-### MASTER ###
-
-### NODES ###
-   (1..POD_NODE_CT).each do |i|
-      config.vm.define "#{NODE}#{i}" do |subconfig|
-         $HOOK = <<-EOF
-            #{DOCKER}
-            #{K8S}
-         EOF
-         $JOIN = <<-EOF
-            echo '#!/bin/bash
-scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_SUFFIX}":/joincluster.sh /joincluster.sh
-/bin/bash /joincluster.sh' > /root/join_k8s_cluster.sh
-         EOF
-         subconfig.vm.box = "#{IMAGE}"
-         subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
-         subconfig.vm.provider "#{PROVIDER}" do |v|
-            v.name = "#{VM_NAME_NODE}#{i}"
-            v.memory = 1024
-            v.cpus = 2
-         end
-         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-         subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
-         subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
-         subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
-         subconfig.vm.provision "#{NODE}#{i}", type: "shell", run: "once", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
-         subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
-         subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
-         subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
-         subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
-         subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
-               date > /etc/vagrant_provisioned_at
-               EOF
-         PORT = 2300 + i
-         subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-         ndx = i - 1
-         subconfig.vm.network "private_network", ip: pod_ip_pool[ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
-      end
-   end
-### NODES ###
-
-  # Enable provisioning with a shell script. Additional provisioners such as
-  # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
-  # documentation for more information about their specific syntax and use.
-  # config.vm.provision "shell", inline: <<-SHELL
-  #   apt-get update
-  #   apt-get install -y apache2
-  # SHELL
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -289,18 +280,13 @@ scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_SUFFIX}":/joincluster.sh /
   # config.vm.box_check_update = false
 
 end
-###
-
-def msg(message)
-   if INTERACTIVE
-      return "%%%%%%%%%%%%%%% ******** %%%%% ******** #{message} ******** %%%%% ******* %%%%%%%%%%%%%%%"
-   end
-   return "%%%%%%%%%%%%%%% ******** %%%%% ******** #{message} ******** %%%%% ******* %%%%%%%%%%%%%%%"
-#   return "echo export DEBIAN_FRONTEND=noninteractive"
-end
 ### END Vagrant.configure ###
+MSG = "%%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% *****"
+def msg(message)
+   return "#{MSG} #{message}"
+end
 
-NTP = 'echo ' + msg("Doing NTP")+'
+NTP = 'echo ' + msg("Installing NTP")+'
 sudo apt-get -y -qq install ntp ntpdate ntpstat \
    && if sudo service ntp status > /dev/null; then sudo service ntp stop; fi \
    && echo "syncing NTP with time.nist.gov..." \
@@ -310,22 +296,22 @@ sudo apt-get -y -qq install ntp ntpdate ntpstat \
    &&    if [ ${i} -ge ${ntp_tries} ]; \
             then echo -n "NTP:" && echo bailing && break; fi; done'
 
-PYTHON = 'echo ' + msg("Doing Python")+'
+PYTHON = 'echo ' + msg("Installing Python")+'
 sudo apt-get -y -qq install python3 \
    && sudo update-alternatives --install \
          /usr/bin/python python /usr/bin/python3 1'
 
-ANSIBLE = 'echo ' + msg("Doing Ansible")+'
+ANSIBLE = 'echo ' + msg("Installing Ansible")+'
    sudo apt-add-repository --yes --update ppa:ansible/ansible\
    && sudo apt-get -y install ansible'
 
-AWSCLI = 'echo ' + msg("Doing AWS CLI")+'
+AWSCLI = 'echo ' + msg("Installing AWS CLI")+'
 if ! command -v curl > /dev/null; then sudo apt-get -y -qq install curl; fi
 if ! command -v unzip > /dev/null; then sudo apt-get -y -qq install unzip; fi
 curl -s https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip\
    && if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && sudo ./aws/install; else sudo ./aws/install --update; fi'
 
-DOCKER = 'echo ' + msg("Doing Docker")+'
+DOCKER = 'echo ' + msg("Installing Docker")+'
 if ! command -v curl > /dev/null; then sudo apt-get -y -qq install curl; fi
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key --keyring /etc/apt/trusted.gpg.d/docker.gpg add - \
 && sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
@@ -338,20 +324,24 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key --keyring
    gnupg-agent \
    docker-ce \
    docker-ce-cli \
-   containerd.io \
-&& usermod -aG docker vagrant
+   containerd.io
+systemctl enable docker
+systemctl start docker
+usermod -aG docker vagrant
 '
 
-DOCKERCOMPOSE = 'echo ' + msg("Doing Docker Compose")+'
+DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
 sudo curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
       && sudo chmod +x /usr/local/bin/docker-compose'
 
-K8S = 'echo ' + msg("Doing k8s base")+'
+K8S = 'echo ' + msg("Installing k8s base")+'
 cat >>/etc/sysctl.d/kubernetes.conf<<EOF &&
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 EOF
-sysctl --system >/dev/null 2>&1 \
+sysctl --system >/dev/null 2>&1
+
+sed -i "/swap/d" /etc/fstab && swapoff -a \
 \
 && echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list \
 && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - \
@@ -359,9 +349,17 @@ sysctl --system >/dev/null 2>&1 \
 && sudo apt-get -y -qq install \
    kubelet \
    kubeadm \
-   kubernetes-cni'
+   kubernetes-cni \
+   kubectl
 
-KUBECTL = 'echo ' + msg("Doing kubectl")+'
+systemctl enable kubelet >/dev/null 2>&1
+systemctl start kubelet >/dev/null 2>&1
+
+sed -i "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/" /etc/ssh/sshd_config
+systemctl restart sshd
+'
+
+KUBECTL = 'echo ' + msg("Installing kubectl")+'
 sudo apt-get -y -qq install \
    kubectl'
 
@@ -405,3 +403,36 @@ if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && 
 if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
 ip route
 '"
+
+#ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
+#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
+#run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~vagrant/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
+
+#s="" && f="" && sed -i 's/128\.1\.[0,1]/192\.168\.0/' ${f} && x=`grep -n ${s} ${f}| cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x + 1` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak`
+
+### REMOVE ALL LINES BELOW ${s} FROM /ETC/HOSTS
+#s="127.0.2.1" && run-ssh 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts'
+
+#s="127.0.2.1" && x=`grep -n "${s}" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts
+
+
+#// MASTER AS VAGRANT
+#sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
+#mkdir -p $HOME/.kube
+#sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+#sudo chown $(id -u):$(id -g) $HOME/.kube/config
+#kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
+#kubeadm token create --print-join-command > ./joincluster.sh
+#sudo mv ./joincluster.sh /joincluster.sh
+
+#// WORKER AS ROOT
+#apt-get  install -y sshpass >/dev/null 2>&1
+#scp -o StrictHostKeyChecking=no master.k8s-cluster.dev.anytown.usa:/joincluster.sh /joincluster.sh
+
+# // KUBECTL COMMANDS
+#watch kubectl get nodes
+#watch kubectl get all --all-namespaces
+#watch kubectl get pods -n kube-system
+
+#kubectl get pods -n calico-system
+#watch kubectl get pods -n calico-system
