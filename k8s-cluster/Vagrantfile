@@ -37,16 +37,35 @@ NAMELIST = ""
 ETC_HOSTS = ""
 NETMASK = 27
 
-admin_ip = ['192.168.0.10','192.168.0.20']
-admin_nm = ['controller','master'    ]
+### HARD CODED ON PURPOSE -bindia 20201207
+POD_NODE_CT = 2
+MSTR_NODE_CT = 1
+CTLR_NODE_CT = 1
 
-node_ip = ['192.168.0.2','192.168.0.3','192.168.0.4','192.168.0.5','192.168.0.6','192.168.0.7','192.168.0.8','192.168.0.9']
-node_nm = ['node1',      'node2',      'node3',      'node4',      'node5',      'node6',      'node7',      'node8',     ]
+ctlr_ip_pool = ['192.168.0.10']
+ctlr_nm_pool = ["#{CONTROLER}"]
+mstr_ip_pool = ['192.168.0.20']
+mstr_nm_pool = ["#{MASTER}"]
 
-host_ip = admin_ip + node_ip
-host_nm = admin_nm + node_nm
-host_ip.each do |ip| IPLIST+="#{ip} " end
-for i in (0..host_nm.length()-1) do NAMELIST += "#{host_nm[i]} "; ETC_HOSTS += "\n#{host_ip[i]} #{host_nm[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} #{host_nm[i]}" end
+admin_ip_pool = ctlr_ip_pool + mstr_ip_pool
+admin_nm_pool = ctlr_nm_pool + mstr_nm_pool
+
+pod_ip_pool = ['192.168.0.2','192.168.0.3','192.168.0.4','192.168.0.5','192.168.0.6','192.168.0.7','192.168.0.8','192.168.0.9']
+pod_nm_pool = ['node1',      'node2',      'node3',      'node4',      'node5',      'node6',      'node7',      'node8',     ]
+
+host_ip_pool = admin_ip_pool# + pod_ip_pool
+host_nm_pool = admin_nm_pool# + pod_nm_pool
+
+for i in (0..POD_NODE_CT - 1) do
+   "#{host_ip_pool.append(pod_ip_pool[i])}"
+   "#{host_nm_pool.append(pod_nm_pool[i])}"
+end
+
+host_ip_pool.each do |ip| IPLIST+="#{ip} " end
+for i in (0..MSTR_NODE_CT+MSTR_NODE_CT+POD_NODE_CT - 1) do
+   NAMELIST += "#{host_nm_pool[i]} "
+   ETC_HOSTS += "\n#{host_ip_pool[i]} #{host_nm_pool[i]}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN} #{host_nm_pool[i]}"
+end
 
 # WRITES:   /bin/run-ssh
 $RUN_SSH = "echo '#!/bin/bash
@@ -81,7 +100,9 @@ EOF
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~vagrant/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
 
 #s="" && f="" && sed -i 's/128\.1\.[0,1]/192\.168\.0/' ${f} && x=`grep -n ${s} ${f}| cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x + 1` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak`
-#s="127.0.2.1" && run-ssh 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n ${z} /etc/hosts.bak`'
+
+### REMOVE ALL LINES BELOW ${s} FROM /ETC/HOSTS
+#s="127.0.2.1" && run-ssh 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts'
 
 #// MASTER AS VAGRANT
 #sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
@@ -129,7 +150,7 @@ $LAST = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH + <<-EOF
    #{BASHRC}  >> /etc/bash.bashrc
 EOF
 
-$ADHOC = $ETC_INIT_SYNCHOSTS
+$ADHOC = $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $RUN_SSH
 
 ### CONTROLER ###
    config.vm.define "#{CONTROLER}" do |subconfig|
@@ -156,21 +177,12 @@ $ADHOC = $ETC_INIT_SYNCHOSTS
             EOF
       PORT = 2400
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+      subconfig.vm.network "private_network", ip: host_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
    end
 ### CONTROLER ###
 
 ### MASTER ###
-      $CLUSTER = <<-EOF
-kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
-mkdir /home/vagrant/.kube
-cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
-chown -R vagrant:vagrant /home/vagrant/.kube
-su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
-kubeadm token create --print-join-command > /joincluster.sh
-sudo mv ./joincluster.sh /joincluster.sh
-      EOF
    config.vm.define "#{MASTER}" do |subconfig|
       $HOOK = $NTP_SYNC + <<-EOF
          #{NTP}
@@ -178,6 +190,15 @@ sudo mv ./joincluster.sh /joincluster.sh
          #{DOCKERCOMPOSE}
          #{K8S}
          #{KUBECTL}
+      EOF
+      $CLUSTER = <<-EOF
+         kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
+         mkdir /home/vagrant/.kube
+         cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config
+         chown -R vagrant:vagrant /home/vagrant/.kube
+         su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
+         kubeadm token create --print-join-command > /joincluster.sh
+         sudo mv ./joincluster.sh /joincluster.sh
       EOF
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -200,7 +221,7 @@ sudo mv ./joincluster.sh /joincluster.sh
             EOF
       PORT = 2300
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
-      subconfig.vm.network "private_network", ip: host_ip[1], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+      subconfig.vm.network "private_network", ip: host_ip_pool[1], netmask: NETMASK, virtualbox__intnet: "anytownusa"
    end
 ### MASTER ###
 
@@ -209,7 +230,7 @@ sudo mv ./joincluster.sh /joincluster.sh
 scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /joincluster.sh
 /bin/bash /joincluster.sh
    EOF
-   (1..node_ip.length()).each do |i|
+   (1..POD_NODE_CT).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
          $HOOK = <<-EOF
             #{DOCKER}
@@ -237,7 +258,7 @@ scp -o StrictHostKeyChecking=no "#{MASTER}.#{HOSTNAME_PREFIX}":/joincluster.sh /
          PORT = 2300 + i
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: false
          ndx = i - 1
-         subconfig.vm.network "private_network", ip: node_ip[ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+         subconfig.vm.network "private_network", ip: pod_ip_pool[ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       end
    end
 ### NODES ###
