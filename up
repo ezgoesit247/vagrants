@@ -1,4 +1,3 @@
 #!/bin/bash
 
-if [ ${#} -gt 0 ]; then vagrant up ${@}; else echo " Usage: Need argument(s) for vagrant up"; fi
-
+if [ ${#} -gt 0 ]; then time vagrant up ${@}; else echo " Usage: Need argument(s) for vagrant up"; fi
