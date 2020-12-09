@@ -5,7 +5,7 @@
 TEST=""
 INTERACTIVE = true
 PURPOSE = "k8s-cluster#{TEST}"
-LIFECYCLE = "dev#{TEST}"
+LIFECYCLE = "int#{TEST}"
 DOMAIN = "anytown.usa"
 
 IMAGE = "ubuntu/bionic64"
@@ -37,7 +37,7 @@ NAMELIST = ""
 FQDN = ""
 ETC_HOSTS = ""
 POD_NETWORK = "192.168.0.0"
-NETMASK = 20
+NETMASK = 24
 
 ### HARD CODED ON PURPOSE -bindia 20201207
 POD_NODE_CT = 3
@@ -168,7 +168,7 @@ kubeadm init --apiserver-advertise-address=#{mstr_ip_pool[0]} \
    && chown -R vagrant:vagrant /home/vagrant/.kube \
    && su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml" \
    && kubeadm token create --print-join-command > /joincluster.sh' > /root/create_k8s_cluster.sh
-/bin/bash /root/create_k8s_cluster.sh > /root/reate_k8s_cluster.log 2>&1
+/bin/bash /root/create_k8s_cluster.sh > /root/create_k8s_cluster.log 2>&1
 EOF
       $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
@@ -176,6 +176,9 @@ EOF
          #{DOCKERCOMPOSE}
          #{K8S}
          #{KUBECTL}
+echo 'echo "kubectl get nodes"' >> ~vagrant/.bashrc
+echo 'echo "kubectl get all --all-namespaces"' >> ~vagrant/.bashrc
+echo 'echo "kubectl get pods -n kube-system"' >> ~vagrant/.bashrc
       EOF
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -192,7 +195,7 @@ EOF
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
       subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
-      subconfig.vm.provision "Last", type: "shell", run: "once", name: "last", inline: $LAST
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
       subconfig.vm.provision "shell", type: "shell", run: "always", name:"provisioned_at", inline: <<-EOF
             date >> /etc/vagrant_provisioned_at
             EOF
