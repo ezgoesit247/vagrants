@@ -1,3 +1,3 @@
 #!/bin/bash
 
-if [ ${#} -gt 0 ]; then time vagrant provision ${1} --provision-with ${2}; else echo " Usage: Need 2 argument(s) for vagrant provision <BOX> --provision-with <NAME>"; fi
+if [ ${#} -gt 0 ]; then p=${1} && shift && time vagrant provision ${@} --provision-with ${p}; else echo " Usage: prov <PROV1,PROV2,...> <BOX1> [BOX2]..., [BOXN]"; fi
