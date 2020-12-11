@@ -1,3 +1,14 @@
 #!/bin/bash
 
-if [ ${#} -gt 0 ]; then p=${1} && shift && time vagrant provision ${@} --provision-with ${p}; else echo " Usage: prov <PROV1,PROV2,...> <BOX1> [BOX2]..., [BOXN]"; fi
+for i in "$@"
+do
+case $i in
+        -p=*|-provision-with=*)
+        PROVISIONWITH="--provision-with ${i#*=}"
+        shift # past argument=value
+        ;;
+esac
+done
+
+echo "Executing: vagrant provision ${@} ${PROVISIONWITH}"
+if [ ${#} -gt 0 ]; then time vagrant provision ${@} ${PROVISIONWITH}; else echo " Usage: prov [-p=PROV1,PROV2...] BOX1 [BOX2]..."; fi
