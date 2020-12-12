@@ -53,15 +53,12 @@ ctlr_nm_pool = ["#{CONTROLLER}"]
 mstr_ip_pool = ["#{IP_PREFIX}.0.20"]
 mstr_nm_pool = ["#{MASTER}"]
 
-#admin_ip_pool = ctlr_ip_pool + mstr_ip_pool
-#admin_nm_pool = ctlr_nm_pool + mstr_nm_pool
-
 pod_ip_pool = []
 pod_nm_pool = []
 for i in 1..POD_NODE_CT  do; pod_ip_pool.append("#{IP_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}_#{i+100}"); end
 
-host_ip_pool = ctlr_ip_pool + mstr_ip_pool# + pod_ip_pool
-host_nm_pool = ctlr_nm_pool + mstr_nm_pool# + pod_nm_pool
+host_ip_pool = ctlr_ip_pool + mstr_ip_pool
+host_nm_pool = ctlr_nm_pool + mstr_nm_pool
 
 for i in (0..POD_NODE_CT - 1) do
    "#{host_ip_pool.append(pod_ip_pool[i])}"
