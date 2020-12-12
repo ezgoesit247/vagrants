@@ -27,6 +27,9 @@ VM_NAME_MASTER = "#{PURPOSE}_#{LIFECYCLE}-#{MASTER}"
 NODE = "node"
 VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}-#{NODE}"
 
+K8S_VERSION = "1.20.0-00"
+DOCKER_VERSION = "5:19.03.14~3-0~ubuntu-bionic"
+
 VAGRANTFILE_API_VERSION = "2"
 
 ### START Vagrant.configure ###
@@ -398,7 +401,6 @@ AWSCLI = 'echo ' + msg("Installing AWS CLI")+'
    curl -s https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip\
    && if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && ./aws/install; else ./aws/install --update; fi'
 
-DOCKER_VERSION = "5:19.03.14~3-0~ubuntu-bionic"
 DOCKER = 'VERSION="' + "#{DOCKER_VERSION}" + '" && echo ' + msg("Installing Docker version: ${VERSION}")+'
    apt-get update
    if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
@@ -422,7 +424,6 @@ DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
    curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
       && chmod +x /usr/local/bin/docker-compose'
 
-K8S_VERSION = "1.20.0-00"
 K8S = 'VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing k8s version: ${VERSION}")+'
 cat >>/etc/sysctl.d/kubernetes.conf<<EOF &&
 net.bridge.bridge-nf-call-ip6tables = 1
