@@ -48,9 +48,9 @@ POD_NODE_CT = 5
 MSTR_NODE_CT = 1
 CTLR_NODE_CT = 1
 
-ctlr_ip_pool = ["#{IP_PREFIX}.0.10"]
+ctlr_ip_pool = ["#{IP_PREFIX}.10"]
 ctlr_nm_pool = ["#{CONTROLLER}"]
-mstr_ip_pool = ["#{IP_PREFIX}.0.20"]
+mstr_ip_pool = ["#{IP_PREFIX}.20"]
 mstr_nm_pool = ["#{MASTER}"]
 
 pod_ip_pool = []
