@@ -11,4 +11,4 @@ esac
 done
 
 echo "Executing: vagrant provision ${@} ${PROVISIONWITH}"
-if [ ${#} -gt 0 ]; then time vagrant provision ${@} ${PROVISIONWITH}; else echo " Usage: prov [-p=PROV1,PROV2...] BOX1 [BOX2]..."; fi
+if [ ${#} -gt 0 ]; then time vagrant provision ${@} ${PROVISIONWITH}; else if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${PROVISIONWITH}; fi; echo " Usage: prov [-p=PROV1,PROV2...] BOX1 [BOX2]..."; fi
