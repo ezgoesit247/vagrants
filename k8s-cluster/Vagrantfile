@@ -35,16 +35,16 @@ VAGRANTFILE_API_VERSION = "2"
 ### START Vagrant.configure ###
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-IP_PREFIX="10.96"
+IP_PREFIX="10.96.0"
 IPLIST = ""
 NAMELIST = ""
 FQDN = ""
 ETC_HOSTS = ""
-POD_NETWORK = "#{IP_PREFIX}.0.0"
+POD_NETWORK = "#{IP_PREFIX}.0"
 NETMASK = 16
 
 ### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 2
+POD_NODE_CT = 5
 MSTR_NODE_CT = 1
 CTLR_NODE_CT = 1
 
@@ -56,10 +56,9 @@ mstr_nm_pool = ["#{MASTER}"]
 #admin_ip_pool = ctlr_ip_pool + mstr_ip_pool
 #admin_nm_pool = ctlr_nm_pool + mstr_nm_pool
 
-pod_ip_pool = ["#{IP_PREFIX}.0.101", "#{IP_PREFIX}.0.102", "#{IP_PREFIX}.0.103", "#{IP_PREFIX}.0.104", "#{IP_PREFIX}.0.105", "#{IP_PREFIX}.0.106", "#{IP_PREFIX}.0.107", "#{IP_PREFIX}.0.108"]
-#pod_nm_pool = []
-#for i in (0..POD_NODE_CT) do "#{pod_nm_pool.append('node'+(i+1))}" end
-pod_nm_pool = ["#{NODE}1","#{NODE}2","#{NODE}3","#{NODE}4","#{NODE}5","#{NODE}6","#{NODE}7","#{NODE}8"]
+pod_ip_pool = []
+pod_nm_pool = []
+for i in 1..POD_NODE_CT  do; pod_ip_pool.append("#{IP_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}_#{i+100}"); end
 
 host_ip_pool = ctlr_ip_pool + mstr_ip_pool# + pod_ip_pool
 host_nm_pool = ctlr_nm_pool + mstr_nm_pool# + pod_nm_pool
