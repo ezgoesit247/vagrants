@@ -233,7 +233,7 @@ echo
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
-      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: <<-EOF
+      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
@@ -287,7 +287,7 @@ EOF
          $FINAL = ""
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
          subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
-         subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: <<-EOF
+         subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
             /bin/bash /etc/init/synchosts.sh
          EOF
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
@@ -329,7 +329,7 @@ EOF
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
-      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: <<-EOF
+      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
