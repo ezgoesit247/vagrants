@@ -35,7 +35,7 @@ VAGRANTFILE_API_VERSION = "2"
 ### START Vagrant.configure ###
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-IP_PREFIX="10.96.0"
+IP_PREFIX="10.0.0"
 IPLIST = ""
 NAMELIST = ""
 FQDN = ""
@@ -172,34 +172,49 @@ EOF
 $ADHOC = ""
 
 ### MASTER ###
-# WRITES:   ~vagrant/create_k8s_cluster.sh
+# WRITES:   ~vagrant/create_k8s_controlplane
       $CREATE_CLUSTER = <<-EOF
 echo '#!/bin/bash
 
-LOG="cluster_initialized.log"
-echo | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
+export K_APISERVER="#{mstr_ip_pool[0]}"
+export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"
 
-echo "Resetting Cluster" | tee -a ${LOG} && sudo su - -c "kubeadm reset -f 2>&1 | tee -a ${LOG} &&  rm -rf ~vagrant/.kube"
-echo "running kubeadm init:" | tee -a ${LOG} && sudo su - -c "kubeadm init --apiserver-advertise-address=#{mstr_ip_pool[0]} \
-   --pod-network-cidr=#{POD_NETWORK}/#{NETMASK}" 2>&1 | tee -a ${LOG}
+#if [[ -z ${K_APISERVER} ]]; then K_APISERVER="10.96.0.20"; fi
+#if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="10.96.0.0/16"; fi
+
+LOG="cluster_initialized.log"
+echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
+
+###
+### echo "Resetting Cluster" | tee -a ${LOG} && sudo su - -c "kubeadm reset -f 2>&1 | tee -a ${LOG}"
+###
+
+echo "running kubeadm init:" | tee -a ${LOG} && sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} \
+   --pod-network-cidr=${K_PODNETWORK}" 2>&1 | tee -a ${LOG}
 systemctl status kubelet|grep Active 2>&1 | tee -a ${LOG}
-mkdir /home/vagrant/.kube 2>&1 | tee -a ${LOG}
+
+mkdir /home/vagrant/.kube 2>/dev/null
 sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config" 2>&1 | tee -a ${LOG}
 sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube" 2>&1 | tee -a ${LOG}
+
 echo "kubectl create:" | tee -a ${LOG} && sudo su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml" 2>&1 | tee -a ${LOG}
-echo "kubeadm token create:" >> ${LOG} && sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh" 2>&1 | tee -a ${LOG}' > /root/create_k8s_cluster.sh
+
+###
+### echo "kubeadm token create:" >> ${LOG} && sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh" 2>&1 | tee -a ${LOG}' > /root/create_k8s_controlplane
+###
 
 echo '
-### RUNCOMMAND
-# /bin/bash ./create_k8s_cluster.sh
-###' >> /root/create_k8s_cluster.sh
+### RUNCOMMAND:
+# /bin/bash ./create_k8s_controlplane
+###' >> /root/create_k8s_controlplane
 
-chown vagrant:vagrant /root/create_k8s_cluster.sh
-ln -fn /root/create_k8s_cluster.sh /home/vagrant/create_k8s_cluster.sh
+chown vagrant:vagrant /root/create_k8s_controlplane
+chmod 744 /root/create_k8s_controlplane
+ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 
 EOF
 ###   COMMAND ABOVE IS MEANT TO RUN FROM THE CONTROLLER AS VAGRANT VIA:
-#           ssh-master "sudo /bin/bash ./create_k8s_cluster.sh"
+#           ssh-master "sudo /bin/bash ./create_k8s_controlplane"
    config.vm.define "#{MASTER}" do |subconfig|
       $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
@@ -216,6 +231,19 @@ if command -v kubectl > /dev/null 2>&1; then echo -n "kubectl: ";kubectl version
 if command -v kubeadm > /dev/null 2>&1; then echo -n "kubeadm: ";kubeadm version --output short; fi
 if command -v docker > /dev/null 2>&1; then docker --version; fi
 
+alias kinfoall="kubectl get all --all-namespaces --output=wide"
+alias kinfoallw="watch kubectl get all --all-namespaces --output=wide"
+alias kgetpods="kubectl get pods --all-namespaces"
+alias kgetpodsw="watch kubectl get pods --all-namespaces"
+alias kgetnodes="kubectl get nodes"
+alias kgetnodesw="watch kubectl get nodes"
+
+alias kgetns="kubectl get namespaces --show-labels"
+alias kdesc="kubectl describe node master"
+
+
+alias ls="ls -Ahltr --color=auto"
+
 echo -n "docker: " && systemctl status docker | grep --color=never Active
 echo -n "kubelet: " && systemctl status kubelet | grep --color=never Active
 
@@ -224,12 +252,12 @@ echo "Some k8s admin commands:"
 echo "kubectl get all --all-namespaces --output=wide"
 echo "kubectl get pods -n kube-system"
 echo "kubectl get nodes"
-echo "kubectl drain <node-name>"
 echo "kubectl drain <node-name> --ignore-daemonsets --delete-local-data"
 echo "kubectl delete node <node-name>"
-echo "kubeadm reset"
 echo
+
 ' >> /home/vagrant/.bashrc
+echo "alias kreset='sudo su - -c \\"kubeadm reset -f\\" && rm -rf ~/.kube && sudo rm -rf /etc/cni/net.d'" >> /home/vagrant/.bashrc
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
@@ -252,6 +280,7 @@ echo
       subconfig.vm.network "forwarded_port", guest: 80, host: 80
       #subconfig.vm.network "forwarded_port", guest: 8080, host: 8080
       #subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
+      subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
 
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
