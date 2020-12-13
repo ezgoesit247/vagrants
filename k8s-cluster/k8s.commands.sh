@@ -1,8 +1,10 @@
 ## MASTER AS VAGRANT
-ip="10.96.0.20"
+#CREATE CONTROL PLANE WITH CALICO POD NETWORK
+LOG="cluster_initialized.log"
+api="10.96.0.20"
 network="10.96.0.0/16"
 NAMESPACE="kube-system"
-YAML="kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
+YAML="https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
 
 sudo su - -c "kubeadm reset -f 2>&1 | tee -a ${LOG} &&  rm -rf ~vagrant/.kube"
 sudo su - -c "kubeadm init --apiserver-advertise-address=${api}    --pod-network-cidr=${network}" 2>&1
@@ -11,7 +13,7 @@ mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-sudo su - vagrant -c ${YAML} 2>&1
+sudo su - vagrant -c "kubectl create -f ${YAML}" 2>&1
 kubeadm token create --print-join-command > ./joincluster.sh
 sudo mv ./joincluster.sh /joincluster.sh
 
@@ -41,7 +43,21 @@ for node in ${nodelist}; do ssh-master "kubectl drain ${node}  --ignore-daemonse
 ssh-pods 'sudo su - -c "kubeadm reset -f"'
 ssh-master 'sudo su - -c "kubeadm reset -f'
 
+# ADMIN COMMANDS
+kubectl config view
+kubectl get all --all-namespaces --output=wide
+kubectl get nodes
+kubectl get pods
+kubectl get pods -w -l app=nginx
+kubectl describe pod/wordpress-69cd75f4f-fr482
+
 kubectl drain <node-name>
 kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
 kubectl delete node <node-name>
 kubeadm reset
+
+deployments="wordpress wordpress-mysql"
+for d in ${deployments}; do kubectl delete deployment ${d};done
+
+services="wordpress wordpress-mysql"
+for s in ${services}; do kubectl delete service ${s};done
