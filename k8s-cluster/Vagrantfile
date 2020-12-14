@@ -149,6 +149,8 @@ EOF
 $ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$ETC_BASHRC
 #{BASHRC}  >> /etc/bash.bashrc
+echo "alias kreset='sudo su - -c \"kubeadm reset -f\" && rm -rf ~/.kube && sudo rm -rf /etc/cni/net.d'
+" >> /etc/bash.bashrc
 EOF
 
 $GENKEY = <<EOF
@@ -165,7 +167,6 @@ apt-get update
 EOF
 
 $LAST = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
-   echo 'ip route' >> /etc/bash.bashrc
    date >> /etc/vagrant_provisioned_at
 EOF
 
@@ -213,8 +214,6 @@ chmod 744 /root/create_k8s_controlplane
 ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 
 EOF
-###   COMMAND ABOVE IS MEANT TO RUN FROM THE CONTROLLER AS VAGRANT VIA:
-#           ssh-master "sudo /bin/bash ./create_k8s_controlplane"
    config.vm.define "#{MASTER}" do |subconfig|
       $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
@@ -223,50 +222,11 @@ EOF
          #{K8S}
          #{KUBECTL}
       EOF
-      $FINAL = <<-EOF
-         echo 'echo
-if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
-if command -v kubelet > /dev/null 2>&1; then kubelet --version; fi
-if command -v kubectl > /dev/null 2>&1; then echo -n "kubectl: ";kubectl version --short --client; fi
-if command -v kubeadm > /dev/null 2>&1; then echo -n "kubeadm: ";kubeadm version --output short; fi
-if command -v docker > /dev/null 2>&1; then docker --version; fi
-
-alias ls="ls -Ahltr --color=auto"
-alias watch='watch '
-
-alias k="kubectl"
-alias kinfoall="kubectl get all --all-namespaces --output=wide"
-alias kinfoallw="watch kubectl get all --all-namespaces --output=wide"
-
-alias kgetpod="kubectl get pod"
-alias kgetpodw="watch kubectl get pod"
-alias kgetpods="kubectl get pods --all-namespaces"
-alias kgetpodsw="watch kubectl get pods --all-namespaces"
-alias kgetnodes="kubectl get nodes"
-alias kgetnodesw="watch kubectl get nodes"
-
-alias kgetns="kubectl get namespaces --show-labels"
-alias kdesc="kubectl describe"
-alias kget="kubectl get"
-alias kgetall="kubectl get --all-namespaces --output=wide"
-
-echo -n "docker: " && systemctl status docker | grep --color=never Active
-echo -n "kubelet: " && systemctl status kubelet | grep --color=never Active
-
-echo
-echo "Some k8s admin commands:"
-echo "kubectl get all --all-namespaces --output=wide"
-echo "kubectl get pods -n kube-system"
-echo "kubectl get nodes"
-echo "kubectl drain <node-name> --ignore-daemonsets --delete-local-data"
-echo "kubectl delete node <node-name>"
-echo
-
-' >> /home/vagrant/.bashrc
-echo "alias kreset='sudo su - -c \\"kubeadm reset -f\\" && rm -rf ~/.kube && sudo rm -rf /etc/cni/net.d'" >> /home/vagrant/.bashrc
+      $FINAL = $ETC_BASHRC + <<-EOF
+         date >> /etc/vagrant_provisioned_at
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
-      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
+      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
@@ -319,9 +279,11 @@ EOF
             #{DOCKER}
             #{K8S}
          EOF
-         $FINAL = ""
+         $FINAL = <<-EOF
+            date >> /etc/vagrant_provisioned_at
+         EOF
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
-         subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
+         subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
          subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
             /bin/bash /etc/init/synchosts.sh
          EOF
@@ -359,11 +321,9 @@ EOF
       EOF
       $FINAL = <<-EOF
          date >> /etc/vagrant_provisioned_at
-         #{BASHRC}  >> /home/vagrant/.bashrc
-         #{BASHRC}  >> /root/.bashrc
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
-      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS+$ETC_INIT_SYNCHOSTS
+      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
@@ -478,56 +438,100 @@ KUBECTL = 'VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing kubect
       kubectl=${VERSION}'
 
 BASHRC = "echo '
-   function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
-   function green  { color 4 2 \"${*}\"; }
-   function yellow { color 0 3 \"${*}\"; }
-   function red    { color 0 1 \"${*}\"; }
-   function blue   { color 6 4 \"${*}\"; }
-   function cyan   { color 4 6 \"${*}\"; }
-   function grey   { color 0 7 \"${*}\"; }
-   function pass   { echo \"$(green PASS: ${*})\"; echo; }
-   function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
-   function fail   { echo \"$(red FAIL: ${*})\"; echo; }
-   function info   { echo \"$(grey INFO: ${*})\"; echo; }
-   function showalias { echo ${BASH_ALIASES[*]}; }
-   function getservices { systemctl list-units --type=service; }
-   function getactive { systemctl list-units --type=service --state=active; }
-   function getinactive { systemctl list-units --type=service --state=inactive; }
-   function getdead { getinactive|grep dead; }
-   function getrunning { systemctl list-units --type=service --state=running; }
+function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
+function green  { color 4 2 \"${*}\"; }
+function yellow { color 0 3 \"${*}\"; }
+function red    { color 0 1 \"${*}\"; }
+function blue   { color 6 4 \"${*}\"; }
+function cyan   { color 4 6 \"${*}\"; }
+function grey   { color 0 7 \"${*}\"; }
+function pass   { echo \"$(green PASS: ${*})\"; echo; }
+function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
+function fail   { echo \"$(red FAIL: ${*})\"; echo; }
+function info   { echo \"$(grey INFO: ${*})\"; echo; }
+function showalias { echo ${BASH_ALIASES[*]}; }
+function getservices { systemctl list-units --type=service; }
+function getactive { systemctl list-units --type=service --state=active; }
+function getinactive { systemctl list-units --type=service --state=inactive; }
+function getdead { getinactive|grep dead; }
+function getrunning { systemctl list-units --type=service --state=running; }
 
-   grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
+grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
 
-   if systemctl --all --type service | grep -q ntp.service; then
-      echo \"NTP sync...\"
-      if command -v ntpstat > /dev/null 2>&1; then
-         ntp_tries=15 && ntp_delay_seconds=2 && i=0
-         while ! ntpstat 2> /dev/null
-           do sleep \${ntp_delay_seconds} && i=\`expr \${i} + 1\`
-           if [ \${i} -ge \${ntp_tries} ]
-             then yellow \"NTP:\" && echo bailing && break
-           fi
-         done
-         if ntpstat > /dev/null 2>&1
-            then green \"NTP Synchronization Status:\" && ntpstat
-            else red \"NTP:\" && echo \"not synchronized\"
-         fi
+if systemctl --all --type service | grep -q ntp.service; then \
+   if systemctl list-units --type=service --state=inactive|grep ntp.service| grep -q dead; then
+      sudo systemctl start ntp.service; fi
+   echo \"NTP sync...\"
+   if command -v ntpstat > /dev/null 2>&1; then
+      ntp_tries=15 && ntp_delay_seconds=2 && i=0
+      while ! ntpstat 2> /dev/null
+        do sleep \${ntp_delay_seconds} && i=\`expr \${i} + 1\`
+        if [ \${i} -ge \${ntp_tries} ]
+          then yellow \"NTP:\" && echo bailing && break
+        fi
+      done
+      if ntpstat > /dev/null 2>&1
+         then green \"NTP Synchronization Status:\" && ntpstat
+         else red \"NTP:\" && echo \"not synchronized\"
       fi
    fi
+fi
 
-   if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
-   if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; echo; fi;
-   if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
-   if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
-   #if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
-   #if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; else yellow \"No Docker Compose\"; echo; fi;
-   #if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
+if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
+if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; echo; fi;
+if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
+if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
+#if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
+#if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; else yellow \"No Docker Compose\"; echo; fi;
+#if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
 
-   alias master=/usr/local/bin/ssh-master
-   alias pods=/usr/local/bin/ssh-pods
-   echo \"Aliased: master => ssh-master\"
-   echo \"Aliased: pods => ssh-pods\"
+alias master=/usr/local/bin/ssh-master
+alias pods=/usr/local/bin/ssh-pods
+
+alias ls=\"ls -Ahltr --color=auto\"
+alias watch=\"watch \"
+
+alias k=\"kubectl\"
+alias kinfoall=\"kubectl get all --all-namespaces --output=wide\"
+alias kinfoallw=\"watch kubectl get all --all-namespaces --output=wide\"
+
+alias kgetpod=\"kubectl get pod\"
+alias kgetpodw=\"watch kubectl get pod\"
+alias kgetpods=\"kubectl get pods --all-namespaces\"
+alias kgetpodsw=\"watch kubectl get pods --all-namespaces\"
+alias kgetnodes=\"kubectl get nodes\"
+alias kgetnodesw=\"watch kubectl get nodes\"
+
+alias kgetns=\"kubectl get namespaces --show-labels\"
+alias kdesc=\"kubectl describe\"
+alias kget=\"kubectl get\"
+alias kgetall=\"kubectl get --all-namespaces --output=wide\"
+
+echo \"Aliased: master => ssh-master\"
+echo \"Aliased: pods => ssh-pods\"
+echo
+ip route
+echo
+echo -n \"docker: \" && systemctl status docker | grep --color=never Active
+echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 '"
+
+
+#if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
+#if command -v kubelet > /dev/null 2>&1; then kubelet --version; fi
+#if command -v kubectl > /dev/null 2>&1; then echo -n "kubectl: ";kubectl version --short --client; fi
+#if command -v kubeadm > /dev/null 2>&1; then echo -n "kubeadm: ";kubeadm version --output short; fi
+#if command -v docker > /dev/null 2>&1; then docker --version; fi
+
+#echo
+#echo "Some k8s admin commands:"
+#echo "kubectl get all --all-namespaces --output=wide"
+#echo "kubectl get pods -n kube-system"
+#echo "kubectl get nodes"
+#echo "kubectl drain <node-name> --ignore-daemonsets --delete-local-data"
+#echo "kubectl delete node <node-name>"
+#echo
+
 
 #ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
