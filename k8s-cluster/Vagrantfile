@@ -182,7 +182,7 @@ export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"
 #if [[ -z ${K_APISERVER} ]]; then K_APISERVER="10.96.0.20"; fi
 #if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="10.96.0.0/16"; fi
 
-LOG="cluster_initialized.log"
+LOG="${HOME}/cluster_initialized.log"
 echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
 
 ###
@@ -231,18 +231,24 @@ if command -v kubectl > /dev/null 2>&1; then echo -n "kubectl: ";kubectl version
 if command -v kubeadm > /dev/null 2>&1; then echo -n "kubeadm: ";kubeadm version --output short; fi
 if command -v docker > /dev/null 2>&1; then docker --version; fi
 
+alias ls="ls -Ahltr --color=auto"
+alias watch='watch '
+
+alias k="kubectl"
 alias kinfoall="kubectl get all --all-namespaces --output=wide"
 alias kinfoallw="watch kubectl get all --all-namespaces --output=wide"
+
+alias kgetpod="kubectl get pod"
+alias kgetpodw="watch kubectl get pod"
 alias kgetpods="kubectl get pods --all-namespaces"
 alias kgetpodsw="watch kubectl get pods --all-namespaces"
 alias kgetnodes="kubectl get nodes"
 alias kgetnodesw="watch kubectl get nodes"
 
 alias kgetns="kubectl get namespaces --show-labels"
-alias kdesc="kubectl describe node master"
-
-
-alias ls="ls -Ahltr --color=auto"
+alias kdesc="kubectl describe"
+alias kget="kubectl get"
+alias kgetall="kubectl get --all-namespaces --output=wide"
 
 echo -n "docker: " && systemctl status docker | grep --color=never Active
 echo -n "kubelet: " && systemctl status kubelet | grep --color=never Active
@@ -277,7 +283,7 @@ echo "alias kreset='sudo su - -c \\"kubeadm reset -f\\" && rm -rf ~/.kube && sud
       PORT = 2300
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
-      subconfig.vm.network "forwarded_port", guest: 80, host: 80
+      subconfig.vm.network "forwarded_port", guest: 31441, host: 80
       #subconfig.vm.network "forwarded_port", guest: 8080, host: 8080
       #subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
@@ -483,6 +489,13 @@ BASHRC = "echo '
    function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
    function fail   { echo \"$(red FAIL: ${*})\"; echo; }
    function info   { echo \"$(grey INFO: ${*})\"; echo; }
+   function showalias { echo ${BASH_ALIASES[*]}; }
+   function getservices { systemctl list-units --type=service; }
+   function getactive { systemctl list-units --type=service --state=active; }
+   function getinactive { systemctl list-units --type=service --state=inactive; }
+   function getdead { getinactive|grep dead; }
+   function getrunning { systemctl list-units --type=service --state=running; }
+
    grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
 
    if systemctl --all --type service | grep -q ntp.service; then
