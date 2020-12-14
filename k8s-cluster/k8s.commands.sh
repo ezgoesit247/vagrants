@@ -46,18 +46,31 @@ ssh-master 'sudo su - -c "kubeadm reset -f'
 # ADMIN COMMANDS
 kubectl config view
 kubectl get all --all-namespaces --output=wide
+kubectl describe all --all-namespaces
 kubectl get nodes
 kubectl get pods
 kubectl get pods -w -l app=nginx
+kubectl get pv task-pv-volume
 kubectl describe pod/wordpress-69cd75f4f-fr482
+
+
+### ENAABLE SINGLE NODE CLUSTER ###
+kubectl taint nodes --all node-role.kubernetes.io/master-
+### ### ### ###
+kubectl exec -it task-pv-pod -- /bin/bash
 
 kubectl drain <node-name>
 kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
 kubectl delete node <node-name>
 kubeadm reset
 
-deployments="wordpress wordpress-mysql"
-for d in ${deployments}; do kubectl delete deployment ${d};done
+list="wordpress wordpress-mysql" && \
+for deployment in ${list}; do kubectl delete deployment ${deployment};done
 
-services="wordpress wordpress-mysql"
-for s in ${services}; do kubectl delete service ${s};done
+list="wordpress wordpress-mysql" && \
+for service in ${list}; do kubectl delete service ${service};done
+
+list="wp-pv-claim mysql-pv-claim" && \
+for pvc in ${list}; do kubectl delete pvc ${pvc};done
+
+kubectl delete statefulset ${s}
