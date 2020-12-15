@@ -55,7 +55,7 @@ mstr_nm_pool = ["#{MASTER}"]
 
 pod_ip_pool = []
 pod_nm_pool = []
-for i in 1..POD_NODE_CT  do; pod_ip_pool.append("#{IP_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}_#{i+100}"); end
+for i in 1..POD_NODE_CT  do; pod_ip_pool.append("#{IP_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}#{i}"); end
 
 host_ip_pool = ctlr_ip_pool + mstr_ip_pool
 host_nm_pool = ctlr_nm_pool + mstr_nm_pool
@@ -170,18 +170,17 @@ $LAST = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
    date >> /etc/vagrant_provisioned_at
 EOF
 
-$ADHOC = ""
+$ADHOC = <<EOF
+echo "if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;" >> /etc/bash.bashrc
+EOF
 
 ### MASTER ###
 # WRITES:   ~vagrant/create_k8s_controlplane
       $CREATE_CLUSTER = <<-EOF
 echo '#!/bin/bash
 
-export K_APISERVER="#{mstr_ip_pool[0]}"
-export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"
-
-#if [[ -z ${K_APISERVER} ]]; then K_APISERVER="10.96.0.20"; fi
-#if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="10.96.0.0/16"; fi
+if [[ -z ${K_APISERVER} ]]; then echo "K_APISERVER not found"; fi
+if [[ -z ${K_PODNETWORK} ]]; then echo "K_PODNETWORK not found"; fi
 
 LOG="${HOME}/cluster_initialized.log"
 echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
@@ -201,17 +200,19 @@ sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube" 2>&1 | tee -a ${LOG}
 echo "kubectl create:" | tee -a ${LOG} && sudo su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml" 2>&1 | tee -a ${LOG}
 
 ###
-### echo "kubeadm token create:" >> ${LOG} && sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh" 2>&1 | tee -a ${LOG}' > /root/create_k8s_controlplane
+### echo "kubeadm token create:" >> ${LOG} && sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh" 2>&1 | tee -a ${LOG}
 ###
-
-echo '
 ### RUNCOMMAND:
 # /bin/bash ./create_k8s_controlplane
-###' >> /root/create_k8s_controlplane
+###' > /root/create_k8s_controlplane
 
 chown vagrant:vagrant /root/create_k8s_controlplane
 chmod 744 /root/create_k8s_controlplane
 ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
+
+echo '
+export K_APISERVER="#{mstr_ip_pool[0]}"
+export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"' >> /etc/bash.bashrc
 
 EOF
    config.vm.define "#{MASTER}" do |subconfig|
@@ -225,7 +226,7 @@ EOF
       $FINAL = $ETC_BASHRC + <<-EOF
          date >> /etc/vagrant_provisioned_at
       EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
@@ -243,7 +244,7 @@ EOF
       PORT = 2300
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
-      subconfig.vm.network "forwarded_port", guest: 31441, host: 80
+      #subconfig.vm.network "forwarded_port", guest: 31441, host: 80
       #subconfig.vm.network "forwarded_port", guest: 8080, host: 8080
       #subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
@@ -282,7 +283,7 @@ EOF
          $FINAL = <<-EOF
             date >> /etc/vagrant_provisioned_at
          EOF
-         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
          subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
          subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
             /bin/bash /etc/init/synchosts.sh
@@ -318,11 +319,13 @@ EOF
       $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
          #{AWSCLI}
+         #{DOCKER}
+         #{DOCKERCOMPOSE}
       EOF
-      $FINAL = <<-EOF
+      $FINAL = $ETC_BASHRC + <<-EOF
          date >> /etc/vagrant_provisioned_at
       EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: ""
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
@@ -339,6 +342,7 @@ EOF
       PORT = 2400
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: ctlr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+      subconfig.vm.synced_folder "/Users/brandonindia/Docker", "/home/vagrant/Docker"
 
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{CONTROLLER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -482,8 +486,8 @@ if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --vers
 if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
 if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
 #if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
-#if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; else yellow \"No Docker Compose\"; echo; fi;
-#if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
+if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;
+if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
 
 alias master=/usr/local/bin/ssh-master
 alias pods=/usr/local/bin/ssh-pods
@@ -522,6 +526,7 @@ echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 #if command -v kubectl > /dev/null 2>&1; then echo -n "kubectl: ";kubectl version --short --client; fi
 #if command -v kubeadm > /dev/null 2>&1; then echo -n "kubeadm: ";kubeadm version --output short; fi
 #if command -v docker > /dev/null 2>&1; then docker --version; fi
+#if command -v docker-compose > /dev/null 2>&1; then cyan "Docker Compose:" && docker-compose --version; fi;
 
 #echo
 #echo "Some k8s admin commands:"
@@ -540,9 +545,9 @@ echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 #s="" && f="" && sed -i 's/128\.1\.[0,1]/192\.168\.0/' ${f} && x=`grep -n ${s} ${f}| cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x + 1` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak`
 
 ### REMOVE ALL LINES BELOW ${s} FROM /ETC/HOSTS
-#ssh-all 'hostname && x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts'
+#ssh-all 'f="/etc/hosts" && s="127.0.2.1" && hostname && x=`grep -n "${s}" ${f} | cut -f1 -d:` && y=`cat {f}|wc -l` && z=`expr $y - $x` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak` && cat ${f}'
 
-#s="127.0.2.1" && x=`grep -n "${s}"          /etc/hosts | cut -f1 -d:` && y=`cat /etc/hosts|wc -l` && z=`expr $y - $x` && cp -p /etc/hosts /etc/hosts.bak && cat>/etc/hosts<<<`head -n -${z} /etc/hosts.bak` && cat /etc/hosts
+#s="127.0.2.1" && f="/etc/hosts" && x=`grep -n "${s}" ${f} | cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak` && cat ${f}
 
 
 #// MASTER AS VAGRANT
