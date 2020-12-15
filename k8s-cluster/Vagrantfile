@@ -514,7 +514,7 @@ ip route
 echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
 echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
-'" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& rm -rf ~/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
+'" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
 
 #if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
 #if command -v kubelet > /dev/null 2>&1; then kubelet --version; fi
