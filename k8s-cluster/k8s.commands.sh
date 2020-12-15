@@ -64,13 +64,16 @@ kubectl drain <node-name> --ignore-daemonsets --delete-emptydir-data
 kubectl delete node <node-name>
 kubeadm reset
 
-list="wordpress wordpress-mysql" && \
-for deployment in ${list}; do kubectl delete deployment ${deployment};done
+l="wordpress wordpress-mysql" && \
+for deployment in ${l}; do kubectl delete deployment ${deployment};done
 
-list="wordpress wordpress-mysql" && \
-for service in ${list}; do kubectl delete service ${service};done
+l="wordpress wordpress-mysql" && \
+for service in ${l}; do kubectl delete service ${service};done
 
-list="wp-pv-claim mysql-pv-claim" && \
-for pvc in ${list}; do kubectl delete pvc ${pvc};done
+l="wp-pv-claim mysql-pv-claim" && \
+for pvc in ${l}; do kubectl delete pvc ${pvc};done
+
+l="wp-pv-claim mysql-pv-claim" && \
+for pv in ${l}; do kubectl delete pv ${pv};done
 
 kubectl delete statefulset ${s}
