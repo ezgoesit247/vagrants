@@ -44,7 +44,7 @@ POD_NETWORK = "#{IP_PREFIX}.0"
 NETMASK = 16
 
 ### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 5
+POD_NODE_CT = 3
 MSTR_NODE_CT = 1
 CTLR_NODE_CT = 1
 
@@ -149,8 +149,6 @@ EOF
 $ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$ETC_BASHRC
 #{BASHRC}  >> /etc/bash.bashrc
-echo "alias kreset='sudo su - -c \"kubeadm reset -f\" && rm -rf ~/.kube && sudo rm -rf /etc/cni/net.d'
-" >> /etc/bash.bashrc
 EOF
 
 $GENKEY = <<EOF
@@ -170,9 +168,7 @@ $LAST = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
    date >> /etc/vagrant_provisioned_at
 EOF
 
-$ADHOC = <<EOF
-echo "if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;" >> /etc/bash.bashrc
-EOF
+$ADHOC = $ETC_BASHRC
 
 ### MASTER ###
 # WRITES:   ~vagrant/create_k8s_controlplane
@@ -227,7 +223,7 @@ EOF
          date >> /etc/vagrant_provisioned_at
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
+      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
@@ -326,8 +322,8 @@ EOF
          date >> /etc/vagrant_provisioned_at
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
-      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
+      subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH
+      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
@@ -518,8 +514,7 @@ ip route
 echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
 echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
-'"
-
+'" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& rm -rf ~/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
 
 #if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
 #if command -v kubelet > /dev/null 2>&1; then kubelet --version; fi
