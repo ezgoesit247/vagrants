@@ -10,5 +10,5 @@ case $i in
 esac
 done
 
-echo "Executing: vagrant up ${@} ${PROVISIONWITH}"
+echo -n "Executing: vagrant up ${@}"; if [[ ! -z ${PROVISIONWITH} ]]; then echo -n " then provisioning with ${PROVISIONWITH} "; fi; echo
 if [ ${#} -gt 0 ]; then time vagrant up ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi; else echo -e " Usage: up [-p=PROV1,PROV2...] BOX1 [BOX2]...\nThis command runs vagrant up, then vagrant provision afterwards"; fi
