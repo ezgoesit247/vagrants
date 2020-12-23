@@ -1,6 +1,11 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+### HARD CODED ON PURPOSE -bindia 20201207
+POD_NODE_CT = 3
+MSTR_NODE_CT = 1
+CTLR_NODE_CT = 1
+
 ### SET THIS TO -test (DASH TEST) TO ENABLE TEST MODE ###
 TEST=""
 INTERACTIVE = true
@@ -42,11 +47,6 @@ FQDN = ""
 ETC_HOSTS = ""
 POD_NETWORK = "#{IP_PREFIX}.0"
 NETMASK = 16
-
-### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 3
-MSTR_NODE_CT = 1
-CTLR_NODE_CT = 1
 
 ctlr_ip_pool = ["#{IP_PREFIX}.10"]
 ctlr_nm_pool = ["#{CONTROLLER}"]
