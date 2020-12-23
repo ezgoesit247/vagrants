@@ -171,7 +171,13 @@ EOF
 $ADHOC = $ETC_BASHRC
 
 ### MASTER ###
-# WRITES:   ~vagrant/create_k8s_controlplane
+
+# $CREATE_CLUSTER
+####################################################
+# =>        writes file: /root/create_k8s_controlplane
+# =>        Changes owner to vagrant
+# =>        Hard links to ~vagrant
+####################################################
       $CREATE_CLUSTER = <<-EOF
 echo '#!/bin/bash
 
@@ -253,10 +259,16 @@ EOF
          v.cpus = 2
       end
    end
-### MASTER ###
+### END MASTER ###
 
 ### NODES ###
-# WRITES:   /root/join_k8s_cluster.sh
+
+# $JOIN
+####################################################
+# =>        writes file: /root/join_k8s_cluster.sh
+# =>        Changes owner to vagrant
+# =>        Hard links to ~vagrant
+####################################################
          $JOIN = <<-EOF
 echo '#!/bin/bash
 sudo su - -c "scp -o StrictHostKeyChecking=no \'#{MASTER}.#{HOSTNAME_SUFFIX}\':/joincluster.sh /joincluster.sh"
