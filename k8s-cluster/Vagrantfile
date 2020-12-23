@@ -181,8 +181,8 @@ $ADHOC = $ETC_BASHRC
       $CREATE_CLUSTER = <<-EOF
 echo '#!/bin/bash
 
-if [[ -z ${K_APISERVER} ]]; then echo "K_APISERVER not found"; fi
-if [[ -z ${K_PODNETWORK} ]]; then echo "K_PODNETWORK not found"; fi
+if [[ -z ${K_APISERVER} ]]; then K_APISERVER="#{mstr_ip_pool[0]}"; echo "K_APISERVER not found, using ${K_APISERVER}"; fi
+if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
 
 LOG="${HOME}/cluster_initialized.log"
 echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
@@ -212,9 +212,9 @@ chown vagrant:vagrant /root/create_k8s_controlplane
 chmod 744 /root/create_k8s_controlplane
 ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 
-echo '
-export K_APISERVER="#{mstr_ip_pool[0]}"
-export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"' >> /etc/bash.bashrc
+###echo '
+###export K_APISERVER="#{mstr_ip_pool[0]}"
+###export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"' >> /etc/bash.bashrc
 
 EOF
    config.vm.define "#{MASTER}" do |subconfig|
