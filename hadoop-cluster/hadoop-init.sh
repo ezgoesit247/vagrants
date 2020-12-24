@@ -1,3 +1,5 @@
+### THIS FILE IS NOT INTENDED TO BE RUN
+
 JAVA_HOME="/jdk1.8"
 M2_HOME="/maven"
 HADOOP_HOME="/hadoop"
