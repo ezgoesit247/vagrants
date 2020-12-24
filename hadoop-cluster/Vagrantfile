@@ -2,14 +2,14 @@
 # vi: set ft=ruby :
 
 ### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 3
+POD_NODE_CT = 0
 MSTR_NODE_CT = 1
-CTLR_NODE_CT = 1
+CTLR_NODE_CT = 0
 
 ### SET THIS TO -test (DASH TEST) TO ENABLE TEST MODE ###
 TEST=""
 INTERACTIVE = true
-PURPOSE = "k8s-deployment#{TEST}"
+PURPOSE = "hadoop#{TEST}"
 LIFECYCLE = "dev#{TEST}"
 DOMAIN = "anytown.usa"
 
@@ -157,14 +157,14 @@ ssh-keygen -t rsa -b 4096 -f "/home/vagrant/.ssh/provisioned_id_rsa.`openssl ran
 EOF
 
 ### WRITE /ETC/HOSTS VERY EARLY
-$FIRST = <<EOF
+$WRITE_HOSTS_APTUPDATE_PYTHON = <<EOF
 echo -e '#{ETC_HOSTS}' >> /etc/hosts \
    && echo -e 'added to /etc/hosts: #{ETC_HOSTS}'
 apt-get update
    #{PYTHON}
 EOF
 
-$LAST = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
+$WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
    date >> /etc/vagrant_provisioned_at
 EOF
 
@@ -219,29 +219,25 @@ ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 EOF
    config.vm.define "#{MASTER}" do |subconfig|
       $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
-         #{NTP}
-         #{DOCKER}
-         #{DOCKERCOMPOSE}
-         #{K8S}
-         #{KUBECTL}
-      EOF
-      $FINAL = $ETC_BASHRC + <<-EOF
-         date >> /etc/vagrant_provisioned_at
+apt-get purge -qq openjdk-\*
+
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
-      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
-      subconfig.vm.provision "#{MASTER}", type: "shell", run: "once", name: "#{MASTER}", path: "#{MASTER_SCRIPT}"
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{MASTER_SCRIPT}"
       subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
       subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
-      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
-      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $FINAL
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
+      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $ETC_BASHRC + <<-EOF
+                                                                           date >> /etc/vagrant_provisioned_at
+                                                                                 EOF
 
       PORT = 2300
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
@@ -249,7 +245,8 @@ EOF
       #subconfig.vm.network "forwarded_port", guest: 31441, host: 80
       #subconfig.vm.network "forwarded_port", guest: 8080, host: 8080
       #subconfig.vm.network "forwarded_port", guest: 3000, host: 3000
-      subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
+      #subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
+      #subconfig.vm.synced_folder "/Users/brandonindia/Docker/u18-developer/assets/", "/_assets"
 
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -288,23 +285,22 @@ EOF
             #{DOCKER}
             #{K8S}
          EOF
-         $FINAL = <<-EOF
-            date >> /etc/vagrant_provisioned_at
-         EOF
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
          subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
          subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
             /bin/bash /etc/init/synchosts.sh
          EOF
-         subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+         subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
          subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
-         subconfig.vm.provision "#{NODE}#{i}", type: "shell", run: "once", name: "#{NODE}#{i}", path: "#{NODE_SCRIPT}"
          subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
          subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+         subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{NODE_SCRIPT}"
          subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
          subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
-         subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
-         subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $FINAL
+         subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
+         subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
+                                                               date >> /etc/vagrant_provisioned_at
+                                                                              EOF
 
          PORT = 2300 + i
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
@@ -330,23 +326,21 @@ EOF
          #{DOCKER}
          #{DOCKERCOMPOSE}
       EOF
-      $FINAL = $ETC_BASHRC + <<-EOF
-         date >> /etc/vagrant_provisioned_at
-      EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
          /bin/bash /etc/init/synchosts.sh
       EOF
-      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $FIRST
+      subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
-      subconfig.vm.provision "#{CONTROLLER}", type: "shell", run: "once", name: "#{CONTROLLER}", path: "#{CONTROLLER_SCRIPT}"
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{CONTROLLER_SCRIPT}"
       subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
-      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $LAST
-      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $FINAL
-
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
+      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $ETC_BASHRC + <<-EOF
+                                                                           date >> /etc/vagrant_provisioned_at
+                                                                                          EOF
       PORT = 2400
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: ctlr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
@@ -367,10 +361,10 @@ EOF
   # config.vm.box_check_update = false
    config.vm.define "generic" do |subconfig|
       subconfig.vm.box = "#{IMAGE}"
-      $generic = "#{DOCKER}"
-      subconfig.vm.provision "generic", type: "shell", inline: $generic
+      subconfig.vm.provision "generic", type: "shell", run: "never", inline: ""
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.synced_folder "/Users/brandonindia/Docker/u18-developer/assets/", "/root/_assets"
    end
 end
 ### END Vagrant.configure ###
