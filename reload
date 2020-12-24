@@ -11,7 +11,7 @@ esac
 done
 
 echo "Executing: vagrant reload ${@}; vagrant provision -provision-with ${PROVISIONWITH}"
-if [ ${#} -gt 0 ]; then vagrant halt ${@} && up -p=${PROVISIONWITH} ${@}; fi
+if [ ${#} -gt 0 ]; then vagrant halt ${@}; if [ -n "${PROVISIONWITH}" ]; then up -p=${PROVISIONWITH} ${@}; else up ${@}; fi; fi
 
 
 #if [ ${#} -gt 0 ]; then time vagrant up ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi; else echo -e " Usage: up [-p=PROV1,PROV2...] BOX1 [BOX2]...\nThis command runs vagrant up, then vagrant provision afterwards"; fi
