@@ -1,6 +1,7 @@
 ubuntu.commands.sudo.sh
 empty.sh
 node.sh
+master.sh
 root_key.sh
 simple.sh
 sync.hosts.sh

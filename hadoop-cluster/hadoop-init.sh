@@ -1,5 +1,3 @@
-### THIS FILE IS NOT INTENDED TO BE RUN
-
 JAVA_HOME="/jdk1.8"
 M2_HOME="/maven"
 HADOOP_HOME="/hadoop"
@@ -31,6 +29,8 @@ chown -R root:root ${M2_HOME}
 chown -R hadoop:hadoop ${HADOOP_HOME}
 sed -i "s|\${JAVA_HOME}|${JAVA_HOME}|" $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 
+export HADOOP_VERSION=`${HADOOP_HOME}/bin/hadoop version|grep Hadoop|awk "{print $2}"`
+export CLASSPATH="${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:~/MapReduceTutorial/SalesCountry/*:${HADOOP_HOME}/lib/*"
 
 hadooptmpdir="/app/hadoop/tmp"
 cat>$HADOOP_HOME/etc/hadoop/core-site.xml<<EOF
@@ -105,11 +105,24 @@ mkdir $dfsdatadir
 chown -R hadoop:hadoop $dfsdatadir
 chmod 750 $dfsdatadir
 
-$HADOOP_HOME/bin/hdfs namenode -format
-$HADOOP_HOME/sbin/start-dfs.sh
-$HADOOP_HOME/sbin/start-yarn.sh
+#$HADOOP_HOME/bin/hdfs namenode -format \
+#   && $HADOOP_HOME/sbin/start-dfs.sh \
+#   && $HADOOP_HOME/sbin/start-yarn.sh
 
-jps|grep -E 'Node|Manager'
+echo 'function hadoop_init {
+   echo hadoop init just ran; nothing done
+#$HADOOP_HOME/bin/hdfs namenode -format
+#   && $HADOOP_HOME/sbin/start-dfs.sh
+#   && $HADOOP_HOME/sbin/start-yarn.sh
+}' >> /etc/bash.bashrc
 
-$HADOOP_HOME/sbin/stop-dfs.sh
-$HADOOP_HOME/sbin/stop-yarn.sh
+#jps|grep -E 'Node|Manager'
+
+#$HADOOP_HOME/sbin/stop-dfs.sh \
+#   && $HADOOP_HOME/sbin/stop-yarn.sh
+
+echo 'function hadoop_stop {
+   echo hadoop stop just ran; nothing done
+#$HADOOP_HOME/sbin/stop-dfs.sh
+#   && $HADOOP_HOME/sbin/stop-yarn.sh
+}' >> /etc/bash.bashrc
