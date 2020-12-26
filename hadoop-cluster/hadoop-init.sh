@@ -9,14 +9,14 @@ echo export PATH="\$PATH:\${JAVA_HOME}/bin:\${HADOOP_HOME}/bin:\${M2_HOME}/bin" 
 
 echo "ALL ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-echo 3|update-alternatives --config editor
+echo 3|update-alternatives --config editor > /dev/null
 useradd -rm -s /bin/bash -d /home/hadoop -U -u 1002 hadoop
 cp -rp /root/.ssh ~hadoop
 chown -R hadoop:hadoop ~hadoop/.ssh
 
-echo 'alias ls="ls -ltrA --color=auto"' >> ~vagrant/.bashrc
-echo 'alias ls="ls -ltrA --color=auto"' >> ~hadoop/.bashrc
-echo 'alias ls="ls -ltrA --color=auto"' >> /root/.bashrc
+echo 'alias ls="ls -ltrA --color=auto"' >> ~vagrant/.bashrc 2>/dev/null
+echo 'alias ls="ls -ltrA --color=auto"' >> ~hadoop/.bashrc 2>/dev/null
+echo 'alias ls="ls -ltrA --color=auto"' >> /root/.bashrc 2>/dev/null
 
 if [ ! -d ${JAVA_HOME} ]; then mkdir ${JAVA_HOME} && tar -zxf /vagrant/software/hadoop/jdk-8u271-linux-x64.tar.gz \
    -C ${JAVA_HOME} --strip-components 1; fi
@@ -29,8 +29,8 @@ chown -R root:root ${M2_HOME}
 chown -R hadoop:hadoop ${HADOOP_HOME}
 sed -i "s|\${JAVA_HOME}|${JAVA_HOME}|" $HADOOP_HOME/etc/hadoop/hadoop-env.sh
 
-export HADOOP_VERSION=`${HADOOP_HOME}/bin/hadoop version|grep Hadoop|awk "{print $2}"`
-export CLASSPATH="${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:~/MapReduceTutorial/SalesCountry/*:${HADOOP_HOME}/lib/*"
+echo "export HADOOP_VERSION=\`${HADOOP_HOME}/bin/hadoop version|grep Hadoop|awk '{print \$2}'\`" >> /etc/bash.bashrc
+echo 'export CLASSPATH="${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-core-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/mapreduce/hadoop-mapreduce-client-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/share/hadoop/common/hadoop-common-${HADOOP_VERSION}.jar:${HADOOP_HOME}/lib/*"' >> /etc/bash.bashrc
 
 hadooptmpdir="/app/hadoop/tmp"
 cat>$HADOOP_HOME/etc/hadoop/core-site.xml<<EOF
@@ -110,10 +110,10 @@ chmod 750 $dfsdatadir
 #   && $HADOOP_HOME/sbin/start-yarn.sh
 
 echo 'function hadoop_init {
-   echo hadoop init just ran; nothing done
-#$HADOOP_HOME/bin/hdfs namenode -format
-#   && $HADOOP_HOME/sbin/start-dfs.sh
-#   && $HADOOP_HOME/sbin/start-yarn.sh
+   $HADOOP_HOME/bin/hdfs namenode -format
+   $HADOOP_HOME/sbin/start-dfs.sh
+   $HADOOP_HOME/sbin/start-yarn.sh
+   jps|grep -E "Node|Manager"
 }' >> /etc/bash.bashrc
 
 #jps|grep -E 'Node|Manager'
@@ -122,7 +122,8 @@ echo 'function hadoop_init {
 #   && $HADOOP_HOME/sbin/stop-yarn.sh
 
 echo 'function hadoop_stop {
-   echo hadoop stop just ran; nothing done
-#$HADOOP_HOME/sbin/stop-dfs.sh
-#   && $HADOOP_HOME/sbin/stop-yarn.sh
+   s="To stop hadoop"
+   s="${s}\n$HADOOP_HOME/sbin/stop-dfs.sh"
+   s="${s}\n$HADOOP_HOME/sbin/stop-yarn.sh"
+   echo -e "$s"
 }' >> /etc/bash.bashrc

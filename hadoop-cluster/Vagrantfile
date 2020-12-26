@@ -146,8 +146,8 @@ fi' > /etc/init.d/ntpsync.sh \
    && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
 EOF
 
-$ETC_BASHRC = <<EOF
-echo #{MSG} Running: \\$ETC_BASHRC
+$APPEND_ETC_BASHRC = <<EOF
+echo #{MSG} Running: \\$APPEND_ETC_BASHRC
 #{BASHRC}  >> /etc/bash.bashrc
 EOF
 
@@ -158,6 +158,7 @@ EOF
 
 ### WRITE /ETC/HOSTS VERY EARLY
 $WRITE_HOSTS_APTUPDATE_PYTHON = <<EOF
+sed -i 's/mesg\\ n\\ ||\\ true/test\\ -t\\ 0\\ \\&\\&\\ mesg\\ n/' /root/.profile
 echo -e '#{ETC_HOSTS}' >> /etc/hosts \
    && echo -e 'added to /etc/hosts: #{ETC_HOSTS}'
 apt-get update
@@ -168,9 +169,12 @@ $WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
    date >> /etc/vagrant_provisioned_at
 EOF
 
-$ADHOC = $ETC_BASHRC
+$ADHOC = ""
 
 ### MASTER ###
+   config.vm.define "#{MASTER}" do |subconfig|
+      PORT = 2300
+      SOFTWARESTORE = "/vagrant/software"
 
 # $CREATE_CLUSTER
 ####################################################
@@ -217,29 +221,42 @@ ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 ###export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"' >> /etc/bash.bashrc
 
 EOF
-   config.vm.define "#{MASTER}" do |subconfig|
-      $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
+      subconfig.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+      $PACKAGED_SOFTWARE = $ETC_INITD_NTPSYNC + <<-EOF
+apt-get -y install unzip
 apt-get purge -qq openjdk-\*
-
       EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
-         /bin/bash /etc/init/synchosts.sh
+/bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{MASTER_SCRIPT}"
-      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $PACKAGED_SOFTWARE
       subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
-      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
-      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $ETC_BASHRC + <<-EOF
-                                                                           date >> /etc/vagrant_provisioned_at
-                                                                                 EOF
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC + $APPEND_ETC_BASHRC
+      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
+sudo mkdir ~hadoop/software
+sudo cp /vagrant/software/hadoop/First_Hadoop_Program.zip ~hadoop/software/
+sudo unzip -q -d ~hadoop/software/First_Hadoop_Program ~hadoop/software/First_Hadoop_Program.zip
+sudo mv ~hadoop/software/First_Hadoop_Program/Article\\ 6/*csv ~hadoop/software/First_Hadoop_Program/
+sudo mv ~hadoop/software/First_Hadoop_Program/Article\\ 6/*java ~hadoop/software/First_Hadoop_Program/
+sudo rm -rf ~hadoop/software/First_Hadoop_Program/Article\\ 6/
 
-      PORT = 2300
+sudo cp /vagrant/software/hadoop/mapreduce-examples.tzg ~hadoop/software/
+sudo tar --directory ~hadoop/software/ -zxf ~hadoop/software/mapreduce-examples.tzg
+
+sudo chown -R hadoop:hadoop ~hadoop/software
+sudo date >> /etc/vagrant_provisioned_at
+         EOF
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
+sudo cp #{SOFTWARESTORE}/hadoop/hadoop-helloworld.run.txt ~hadoop/software
+sudo chown -R hadoop:hadoop ~hadoop/software
+         EOF
+
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       #subconfig.vm.network "forwarded_port", guest: 31441, host: 80
@@ -281,11 +298,10 @@ ln -fn /root/join_k8s_cluster.sh /home/vagrant/join_k8s_cluster.sh
 EOF
    (1..POD_NODE_CT).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
-         $HOOK = <<-EOF
+         $PACKAGED_SOFTWARE = <<-EOF
             #{DOCKER}
             #{K8S}
          EOF
-         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
          subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS
          subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
             /bin/bash /etc/init/synchosts.sh
@@ -295,12 +311,13 @@ EOF
          subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
          subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
          subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{NODE_SCRIPT}"
-         subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+         subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $PACKAGED_SOFTWARE
          subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
          subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
          subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
-                                                               date >> /etc/vagrant_provisioned_at
-                                                                              EOF
+date >> /etc/vagrant_provisioned_at
+      EOF
+         subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
 
          PORT = 2300 + i
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
@@ -320,28 +337,29 @@ EOF
 
 ### CONTROLLER ###
    config.vm.define "#{CONTROLLER}" do |subconfig|
-      $HOOK = $ETC_INITD_NTPSYNC + <<-EOF
+      PORT = 2400
+      $PACKAGED_SOFTWARE = $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
          #{AWSCLI}
          #{DOCKER}
          #{DOCKERCOMPOSE}
       EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
       subconfig.vm.provision "Hosts", type: "shell", run: "never", name: "Hosts", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
-         /bin/bash /etc/init/synchosts.sh
-      EOF
+/bin/bash /etc/init/synchosts.sh
+   EOF
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{CONTROLLER_SCRIPT}"
-      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $HOOK
+      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $PACKAGED_SOFTWARE
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
-      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $ETC_BASHRC + <<-EOF
-                                                                           date >> /etc/vagrant_provisioned_at
-                                                                                          EOF
-      PORT = 2400
+      subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $APPEND_ETC_BASHRC + <<-EOF
+date >> /etc/vagrant_provisioned_at
+            EOF
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
+
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: ctlr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       subconfig.vm.synced_folder "/Users/brandonindia/Docker", "/home/vagrant/Docker"
@@ -364,7 +382,7 @@ EOF
       subconfig.vm.provision "generic", type: "shell", run: "never", inline: ""
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
-      subconfig.vm.synced_folder "/Users/brandonindia/Docker/u18-developer/assets/", "/root/_assets"
+      #subconfig.vm.synced_folder "/Users/brandonindia/Docker/u18-developer/assets/", "/root/_assets"
    end
 end
 ### END Vagrant.configure ###
@@ -462,83 +480,23 @@ function getactive { systemctl list-units --type=service --state=active; }
 function getinactive { systemctl list-units --type=service --state=inactive; }
 function getdead { getinactive|grep dead; }
 function getrunning { systemctl list-units --type=service --state=running; }
+function verify {
+   if [ -f ${1} ]; then echo ${1} exists
+   else echo fail; return 1; fi
+}
 
-grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release
+info $(grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release)
+blue \"IP Route:\" && echo && ip route
 
-if systemctl --all --type service | grep -q ntp.service; then \
-   if systemctl list-units --type=service --state=inactive|grep ntp.service| grep -q dead; then
-      sudo systemctl start ntp.service; fi
-   echo \"NTP sync...\"
-   if command -v ntpstat > /dev/null 2>&1; then
-      ntp_tries=15 && ntp_delay_seconds=2 && i=0
-      while ! ntpstat 2> /dev/null
-        do sleep \${ntp_delay_seconds} && i=\`expr \${i} + 1\`
-        if [ \${i} -ge \${ntp_tries} ]
-          then yellow \"NTP:\" && echo bailing && break
-        fi
-      done
-      if ntpstat > /dev/null 2>&1
-         then green \"NTP Synchronization Status:\" && ntpstat
-         else red \"NTP:\" && echo \"not synchronized\"
-      fi
-   fi
-fi
+if command -v java > /dev/null 2>&1; then blue \"java:\"; java -version; else yellow \"No Java\"; fi;
+if command -v javac > /dev/null 2>&1; then blue \"javac:\"; javac -version; else yellow \"No JDK\"; fi;
+if command -v mvn > /dev/null 2>&1; then blue \"maven:\"; mvn --version; else yellow \"No Maven\"; fi;
+if command -v hadoop > /dev/null; then blue \"Hadoop:\";hadoop version; fi
 
-if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
-if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; echo; fi;
-if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
-if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
-#if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
-if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;
-if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
+info \"run hadoop_init to start hadoop @ ${HADOOP_HOME}\"
+export CLASSPATH=\"$CLASSPATH::~/MapReduceTutorial/SalesCountry/*\"
 
-alias master=/usr/local/bin/ssh-master
-alias pods=/usr/local/bin/ssh-pods
-
-alias ls=\"ls -Ahltr --color=auto\"
-alias watch=\"watch \"
-
-alias k=\"kubectl\"
-alias kinfoall=\"kubectl get all --all-namespaces --output=wide\"
-alias kinfoallw=\"watch kubectl get all --all-namespaces --output=wide\"
-
-alias kgetpod=\"kubectl get pod\"
-alias kgetpodw=\"watch kubectl get pod\"
-alias kgetpods=\"kubectl get pods --all-namespaces\"
-alias kgetpodsw=\"watch kubectl get pods --all-namespaces\"
-alias kgetnodes=\"kubectl get nodes\"
-alias kgetnodesw=\"watch kubectl get nodes\"
-
-alias kgetns=\"kubectl get namespaces --show-labels\"
-alias kdesc=\"kubectl describe\"
-alias kget=\"kubectl get\"
-alias kgetall=\"kubectl get --all-namespaces --output=wide\"
-
-echo \"Aliased: master => ssh-master\"
-echo \"Aliased: pods => ssh-pods\"
-echo
-ip route
-echo
-echo -n \"docker: \" && systemctl status docker | grep --color=never Active
-echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
-'" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
-
-#if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
-#if command -v kubelet > /dev/null 2>&1; then kubelet --version; fi
-#if command -v kubectl > /dev/null 2>&1; then echo -n "kubectl: ";kubectl version --short --client; fi
-#if command -v kubeadm > /dev/null 2>&1; then echo -n "kubeadm: ";kubeadm version --output short; fi
-#if command -v docker > /dev/null 2>&1; then docker --version; fi
-#if command -v docker-compose > /dev/null 2>&1; then cyan "Docker Compose:" && docker-compose --version; fi;
-
-#echo
-#echo "Some k8s admin commands:"
-#echo "kubectl get all --all-namespaces --output=wide"
-#echo "kubectl get pods -n kube-system"
-#echo "kubectl get nodes"
-#echo "kubectl drain <node-name> --ignore-daemonsets --delete-local-data"
-#echo "kubectl delete node <node-name>"
-#echo
-
+'"
 
 #ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
@@ -550,25 +508,3 @@ echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 #ssh-all 'f="/etc/hosts" && s="127.0.2.1" && hostname && x=`grep -n "${s}" ${f} | cut -f1 -d:` && y=`cat {f}|wc -l` && z=`expr $y - $x` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak` && cat ${f}'
 
 #s="127.0.2.1" && f="/etc/hosts" && x=`grep -n "${s}" ${f} | cut -f1 -d:` && y=`cat ${f}|wc -l` && z=`expr $y - $x` && cp -p ${f} ${f}.bak && cat>${f}<<<`head -n -${z} ${f}.bak` && cat ${f}
-
-
-#// MASTER AS VAGRANT
-#sudo kubeadm init --apiserver-advertise-address=128.1.0.20 --pod-network-cidr=128.1.0.0/20 >> cluster_initialized.txt
-#mkdir -p $HOME/.kube
-#sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-#sudo chown $(id -u):$(id -g) $HOME/.kube/config
-#kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
-#kubeadm token create --print-join-command > ./joincluster.sh
-#sudo mv ./joincluster.sh /joincluster.sh
-
-#// WORKER AS ROOT
-#apt-get  install -y sshpass >/dev/null 2>&1
-#scp -o StrictHostKeyChecking=no master.k8s-cluster.dev.anytown.usa:/joincluster.sh /joincluster.sh
-
-# // KUBECTL COMMANDS
-#watch kubectl get nodes
-#watch kubectl get all --all-namespaces
-#watch kubectl get pods -n kube-system
-
-#kubectl get pods -n calico-system
-#watch kubectl get pods -n calico-system
