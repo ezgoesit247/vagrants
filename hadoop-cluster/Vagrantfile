@@ -240,21 +240,27 @@ apt-get purge -qq openjdk-\*
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC + $APPEND_ETC_BASHRC
       subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
 sudo mkdir ~hadoop/software
-sudo cp /vagrant/software/hadoop/First_Hadoop_Program.zip ~hadoop/software/
+sudo cp #{SOFTWARESTORE}/hadoop/First_Hadoop_Program.zip ~hadoop/software/
 sudo unzip -q -d ~hadoop/software/First_Hadoop_Program ~hadoop/software/First_Hadoop_Program.zip
 sudo mv ~hadoop/software/First_Hadoop_Program/Article\\ 6/*csv ~hadoop/software/First_Hadoop_Program/
 sudo mv ~hadoop/software/First_Hadoop_Program/Article\\ 6/*java ~hadoop/software/First_Hadoop_Program/
 sudo rm -rf ~hadoop/software/First_Hadoop_Program/Article\\ 6/
 
-sudo cp /vagrant/software/hadoop/mapreduce-examples.tzg ~hadoop/software/
+sudo cp #{SOFTWARESTORE}/hadoop/mapreduce-examples.tzg ~hadoop/software/
 sudo tar --directory ~hadoop/software/ -zxf ~hadoop/software/mapreduce-examples.tzg
+
+sudo cp #{SOFTWARESTORE}/hadoop/hadoop-helloworld.run.txt ~hadoop/software
 
 sudo chown -R hadoop:hadoop ~hadoop/software
 sudo date >> /etc/vagrant_provisioned_at
+
+sudo usermod -a -G vagrant hadoop
+sudo chmod -R g=u #{SOFTWARESTORE}/hadoop
+sudo echo 'export SOFTWARESTORE=/vagrant/software/hadoop' >> ~hadoop/.bashrc
+sudo echo 'export SF=${SOFTWARESTORE}' >> ~hadoop/.bashrc
          EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
-sudo cp #{SOFTWARESTORE}/hadoop/hadoop-helloworld.run.txt ~hadoop/software
-sudo chown -R hadoop:hadoop ~hadoop/software
+
          EOF
 
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
