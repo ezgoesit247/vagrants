@@ -171,7 +171,9 @@ EOF
 
 $ADHOC = ""
 
+###
 ### MASTER ###
+###
    config.vm.define "#{MASTER}" do |subconfig|
       PORT = 2300
       SOFTWARESTORE = "/vagrant/software"
@@ -221,6 +223,9 @@ ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 ###export K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"' >> /etc/bash.bashrc
 
 EOF
+###
+### MASTER ###
+###
       subconfig.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
       $PACKAGED_SOFTWARE = $ETC_INITD_NTPSYNC + <<-EOF
 apt-get -y install unzip
@@ -262,7 +267,9 @@ sudo echo 'export SF=${SOFTWARESTORE}' >> ~hadoop/.bashrc
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
 
          EOF
-
+###
+### MASTER ###
+###
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       #subconfig.vm.network "forwarded_port", guest: 31441, host: 80
@@ -281,8 +288,9 @@ sudo echo 'export SF=${SOFTWARESTORE}' >> ~hadoop/.bashrc
    end
 ### END MASTER ###
 
+###
 ### NODES ###
-
+###
 # $JOIN
 ####################################################
 # =>        writes file: /root/join_k8s_cluster.sh
@@ -324,7 +332,9 @@ EOF
 date >> /etc/vagrant_provisioned_at
       EOF
          subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-
+###
+### NODES ###
+###
          PORT = 2300 + i
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
          ndx = i - 1
@@ -341,7 +351,9 @@ date >> /etc/vagrant_provisioned_at
    end
 ### NODES ###
 
+###
 ### CONTROLLER ###
+###
    config.vm.define "#{CONTROLLER}" do |subconfig|
       PORT = 2400
       $PACKAGED_SOFTWARE = $ETC_INITD_NTPSYNC + <<-EOF
@@ -365,7 +377,9 @@ date >> /etc/vagrant_provisioned_at
 date >> /etc/vagrant_provisioned_at
             EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
-
+###
+### CONTROLLER ###
+###
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: ! "#{TEST}".empty?
       subconfig.vm.network "private_network", ip: ctlr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       subconfig.vm.synced_folder "/Users/brandonindia/Docker", "/home/vagrant/Docker"
