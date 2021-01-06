@@ -1,0 +1,4 @@
+#!/bin/bash
+
+destroy ${@}
+up -p=Sync  ${@}
