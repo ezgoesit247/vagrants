@@ -5,7 +5,7 @@ DOCKER_VERSION = "5:19.03.14~3-0~ubuntu-bionic"
 ### SET THIS TO -test (DASH TEST) TO ENABLE TEST MODE ###
 TEST=""
 INTERACTIVE = true
-PURPOSE = "k8s-deployment#{TEST}"
+PURPOSE = "k8s-cluster#{TEST}"
 LIFECYCLE = "dev#{TEST}"
 DOMAIN = "anytown.usa"
 
@@ -41,7 +41,7 @@ POD_NETWORK = "#{IP_PREFIX}.0"
 NETMASK = 16
 
 ### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 2
+POD_NODE_CT = 1
 MSTR_NODE_CT = 1
 CTLR_NODE_CT = 0
 mstr_ip_pool = ["#{IP_PREFIX}.20"]
@@ -93,7 +93,7 @@ chmod 700 /usr/local/bin/ssh-all /usr/local/bin/ssh-master /usr/local/bin/ssh-po
 chown vagrant:vagrant /usr/local/bin/ssh-all /usr/local/bin/ssh-master /usr/local/bin/ssh-pods
 "
 
-# ADDS:     /etc/hosts
+# APPENDS:  /etc/hosts
 $ETC_HOSTS = <<EOF
 x=`grep -n "127.0.2.1" /etc/hosts | cut -f1 -d:` \
    && y=`cat /etc/hosts|wc -l` \
@@ -158,7 +158,7 @@ sed -i 's/mesg\\ n\\ ||\\ true/test\\ -t\\ 0\\ \\&\\&\\ mesg\\ n/' /root/.profil
 echo -e '#{ETC_HOSTS}' >> /etc/hosts \
    && echo -e 'added to /etc/hosts: #{ETC_HOSTS}'
 apt-get -qq update
-   #{PYTHON}
+#{PYTHON}
 EOF
 
 $WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
@@ -178,19 +178,19 @@ $ADHOC = ""
 # =>        Hard links to ~vagrant
 ####################################################
       $CREATE_CLUSTER = <<-EOF
+s=$(echo -n Create Cluster Verbose provisioned @ && date) && sudo su - -c "echo $s >> /etc/vagrant_provisioned_at"
 echo '#!/bin/bash
 
 if [[ -z ${K_APISERVER} ]]; then K_APISERVER="#{mstr_ip_pool[0]}"; echo "K_APISERVER not found, using ${K_APISERVER}"; fi
 if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
 
+YAML="https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
 LOG="${HOME}/cluster_initialized.log"
 echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
 
-###
-### echo "Resetting Cluster" | tee -a ${LOG} && sudo su - -c "kubeadm reset -f 2>&1 | tee -a ${LOG}"
-###
+echo "running kubeadm init:" | tee -a ${LOG}
 
-echo "running kubeadm init:" | tee -a ${LOG} && sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} \
+sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} \
    --pod-network-cidr=${K_PODNETWORK}" 2>&1 | tee -a ${LOG}
 systemctl status kubelet|grep Active 2>&1 | tee -a ${LOG}
 
@@ -198,24 +198,46 @@ mkdir /home/vagrant/.kube 2>/dev/null
 sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config" 2>&1 | tee -a ${LOG}
 sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube" 2>&1 | tee -a ${LOG}
 
-echo "kubectl create:" | tee -a ${LOG} && sudo su - vagrant -c "kubectl create -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml" 2>&1 | tee -a ${LOG}
+echo "kubectl create:" | tee -a ${LOG}
+sudo su - vagrant -c "kubectl create -f ${YAML}" 2>&1 | tee -a ${LOG}
 
-###
-### echo "kubeadm token create:" >> ${LOG} && sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh" 2>&1 | tee -a ${LOG}
-###
+echo "kubeadm token create:" >> ${LOG}
+sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh" 2>&1 | tee -a ${LOG}
+
+if [ -f /joincluster.sh ]; then echo /joincluster.sh exists for pods to use; fi
+
 ### RUNCOMMAND:
-# /bin/bash ./create_k8s_controlplane
+# ./create_k8s_controlplane
 ###
+' > /root/create_k8s_controlplane_verbose
 
+s=$(echo -n Create Cluster provisioned @ && date) && sudo su - -c "echo $s >> /etc/vagrant_provisioned_at"
+echo '#!/bin/bash
+
+YAML="./calico.yaml" && if [ ! -f ${YAML} ]; then curl https://docs.projectcalico.org/manifests/calico.yaml -O; fi
+sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} --pod-network-cidr=${K_PODNETWORK}"
+rm -rf ~vagrant/.kube && mkdir /home/vagrant/.kube 2>/dev/null
+sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config"
+sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube"
+curl https://docs.projectcalico.org/manifests/calico.yaml -O
+systemctl status kubelet|grep Active
+sudo su - vagrant -c "kubectl create -f ${YAML}"
+sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh"
+
+if [ -f /joincluster.sh ]; then echo /joincluster.sh exists for pods to use; fi
 ' > /root/create_k8s_controlplane
 
+chown vagrant:vagrant /root/create_k8s_controlplane_verbose
+chmod 744 /root/create_k8s_controlplane_verbose
+ln -fn /root/create_k8s_controlplane_verbose /home/vagrant/create_k8s_controlplane_verbose
 chown vagrant:vagrant /root/create_k8s_controlplane
 chmod 744 /root/create_k8s_controlplane
 ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
 
 echo '
-K_APISERVER=#{mstr_ip_pool[0]}
-K_PODNETWORK=#{POD_NETWORK}/#{NETMASK}
+export K_APISERVER=#{mstr_ip_pool[0]}
+export K_PODNETWORK=#{POD_NETWORK}/#{NETMASK}
+export KUBECONFIG=~vagrant/.kube/config
 
 ' >> /etc/bash.bashrc
 
@@ -242,10 +264,15 @@ apt-get -y install unzip
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{MASTER_SCRIPT}"
       subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $PACKAGED_SOFTWARE
-      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC + $APPEND_ETC_BASHRC
+      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
       subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
 apt-get -qq clean
+for u in `ls -C /home`;do echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;done
+echo 'alias ls="ls -Ahltr --color=auto"' >> /root/.bashrc
+echo 'echo && echo \\$K_APISERVER = $K_APISERVER'  >> /etc/bash.bashrc
+echo 'echo \\$K_PODNETWORK = $K_PODNETWORK'  >> /etc/bash.bashrc
+echo 'echo \\$KUBECONFIG = $KUBECONFIG'  >> /etc/bash.bashrc
 date >> /etc/vagrant_provisioned_at
          EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
@@ -287,12 +314,9 @@ echo '#!/bin/bash
 sudo su - -c "scp -o StrictHostKeyChecking=no \'#{MASTER}.#{HOSTNAME_SUFFIX}\':/joincluster.sh /joincluster.sh"
 sudo su - -c "/bin/bash /joincluster.sh"' > /root/join_k8s_cluster.sh
 
-### RUNCOMMAND
-# /bin/bash ./join_k8s_cluster.sh > ./join_k8s_cluster.log 2>&1
-###
-
 chown vagrant:vagrant /root/join_k8s_cluster.sh
-ln -fn /root/join_k8s_cluster.sh /home/vagrant/join_k8s_cluster.sh
+ln -fn /root/join_k8s_cluster.sh /home/vagrant/join.sh
+chmod 744 /home/vagrant/join.sh
 
 EOF
 ###
@@ -318,8 +342,11 @@ EOF
          subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
          subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
 date >> /etc/vagrant_provisioned_at
+for u in `ls -C /home`;do echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;done
       EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
+mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join.sh
+      EOF
 ###
 ### NODES ###
 ###
@@ -363,6 +390,7 @@ date >> /etc/vagrant_provisioned_at
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
       subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $APPEND_ETC_BASHRC + <<-EOF
 apt-get -qq clean
+for u in `ls -C /home`;do echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;done
 date >> /etc/vagrant_provisioned_at
             EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
@@ -529,35 +557,38 @@ if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version
 if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;
 if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
 
-alias master=/usr/local/bin/ssh-master
-alias pods=/usr/local/bin/ssh-pods
-
-alias ls=\"ls -Ahltr --color=auto\"
 alias watch=\"watch \"
 
+alias khelp=\"kubectl api-resources\"
 alias k=\"kubectl\"
 alias kinfoall=\"kubectl get all --all-namespaces --output=wide\"
 alias kinfoallw=\"watch kubectl get all --all-namespaces --output=wide\"
 
 alias kgetpod=\"kubectl get pod\"
 alias kgetpodw=\"watch kubectl get pod\"
+
 alias kgetpods=\"kubectl get pods --all-namespaces\"
 alias kgetpodsw=\"watch kubectl get pods --all-namespaces\"
+
 alias kgetnodes=\"kubectl get nodes\"
 alias kgetnodesw=\"watch kubectl get nodes\"
 
 alias kgetns=\"kubectl get namespaces --show-labels\"
-alias kdesc=\"kubectl describe\"
 alias kget=\"kubectl get\"
 alias kgetall=\"kubectl get --all-namespaces --output=wide\"
+alias kdesc=\"kubectl describe\"
 
+alias kdrain=\"f() kubectl drain ${1} --ignore-daemonsets --delete-local-data\"
+
+alias master=/usr/local/bin/ssh-master
+alias pods=/usr/local/bin/ssh-pods
 echo \"Aliased: master => ssh-master\"
 echo \"Aliased: pods => ssh-pods\"
 echo
-ip route
-echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
 echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
+
+
 '" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
 
 #if [ ! -f /etc/init/docker.conf ]; then echo /etc/init/docker.conf not found; fi
