@@ -500,7 +500,7 @@ KUBECTL = 'VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing kubect
    apt-get install --allow-downgrades -qq \
       kubectl=${K8S_VERSION}'
 
-BASHRC = "echo '
+BASHRC = "echo '### START BASHRC
 function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
 function green  { color 4 2 \"${*}\"; }
 function yellow { color 0 3 \"${*}\"; }
@@ -578,8 +578,6 @@ alias kget=\"kubectl get\"
 alias kgetall=\"kubectl get --all-namespaces --output=wide\"
 alias kdesc=\"kubectl describe\"
 
-alias kdrain=\"f() kubectl drain ${1} --ignore-daemonsets --delete-local-data\"
-
 alias master=/usr/local/bin/ssh-master
 alias pods=/usr/local/bin/ssh-pods
 echo \"Aliased: master => ssh-master\"
@@ -608,7 +606,7 @@ echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 #echo
 
 
-#ssh master.k8s 'x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
+#ssh master.k8s 'x=`grep -n ### START BASHRC /etc/bash.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~/.bashrc| cut -f1 -d:` && y=`cat ~/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~/.bashrc ~/.bashrc.bak && cat>~/.bashrc<<<`head -n -${z} ~/.bashrc.bak`'
 #run-ssh 'hostname && x=`grep -n DISTRIB_DESCRIPTION ~vagrant/.bashrc| cut -f1 -d:` && y=`cat ~vagrant/.bashrc|wc -l` && z=`expr $y - $x + 1` && cp -p ~vagrant/.bashrc ~vagrant/.bashrc.bak && cat>~vagrant/.bashrc<<<`head -n -${z} ~vagrant/.bashrc.bak`'
 
