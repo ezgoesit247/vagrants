@@ -1,13 +1,32 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-K8S_VERSION = "1.20.0-00"
-DOCKER_VERSION = "5:19.03.14~3-0~ubuntu-bionic"
 ### SET THIS TO -test (DASH TEST) TO ENABLE TEST MODE ###
 TEST=""
 INTERACTIVE = true
 PURPOSE = "k8s-cluster#{TEST}"
 LIFECYCLE = "dev#{TEST}"
 DOMAIN = "anytown.usa"
+
+### HARD CODED ON PURPOSE -bindia 20201207
+POD_NODE_CT = 1
+MSTR_NODE_CT = 1
+CTLR_NODE_CT = 0
+CONTROLLER = "controller"
+MASTER = "master"
+NODE = "node"
+
+ROUTE_PREFIX="10.244.0"
+NETMASK = 24
+NODE_PREFIX="10.128.0"
+mstr_ip_pool = ["#{ROUTE_PREFIX}.20"]
+mstr_nm_pool = ["#{MASTER}"]
+ctlr_ip_pool = []#["#{ROUTE_PREFIX}.10"]
+ctlr_nm_pool = []#["#{CONTROLLER}"]
+pod_ip_pool = []
+pod_nm_pool = []
+
+K8S_VERSION = "1.20.0-00"
+DOCKER_VERSION = "5:19.03.14~3-0~ubuntu-bionic"
 
 IMAGE = "ubuntu/bionic64"
 PROVIDER = "virtualbox"
@@ -18,14 +37,8 @@ NODE_SCRIPT = "node#{TEST}.sh"
 MASTER_SCRIPT = "master#{TEST}.sh"
 CONTROLLER_SCRIPT = "controller#{TEST}.sh"
 HOSTNAME_SUFFIX = "#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
-
-CONTROLLER = "controller"
 VM_NAME_CONTROLLER = "#{PURPOSE}_#{LIFECYCLE}-#{CONTROLLER}"
-
-MASTER = "master"
 VM_NAME_MASTER = "#{PURPOSE}_#{LIFECYCLE}-#{MASTER}"
-
-NODE = "node"
 VM_NAME_NODE = "#{PURPOSE}_#{LIFECYCLE}-#{NODE}"
 
 VAGRANTFILE_API_VERSION = "2"
@@ -36,22 +49,9 @@ IPLIST = ""
 NAMELIST = ""
 FQDN = ""
 ETC_HOSTS = ""
-IP_PREFIX="10.0.0"
-POD_NETWORK = "#{IP_PREFIX}.0"
-NETMASK = 16
+POD_NETWORK = "#{ROUTE_PREFIX}.0"
 
-### HARD CODED ON PURPOSE -bindia 20201207
-POD_NODE_CT = 1
-MSTR_NODE_CT = 1
-CTLR_NODE_CT = 0
-mstr_ip_pool = ["#{IP_PREFIX}.20"]
-mstr_nm_pool = ["#{MASTER}"]
-ctlr_ip_pool = []#["#{IP_PREFIX}.10"]
-ctlr_nm_pool = []#["#{CONTROLLER}"]
-pod_ip_pool = []
-pod_nm_pool = []
-
-for i in 1..POD_NODE_CT  do; pod_ip_pool.append("#{IP_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}#{i}"); end
+for i in 1..POD_NODE_CT  do; pod_ip_pool.append("#{ROUTE_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}#{i}"); end
 
 host_ip_pool = ctlr_ip_pool + mstr_ip_pool
 host_nm_pool = ctlr_nm_pool + mstr_nm_pool
@@ -140,8 +140,16 @@ if ! ntpstat > /dev/null 2>&1
 fi' > /etc/init.d/ntpsync.sh \
    && chmod 755 /etc/init.d/ntpsync.sh \
    && ln -sfn /etc/init.d/ntpsync.sh /etc/rc3.d/S01ntpsync
-EOF
 
+echo '#!/bin/bash' > /root/test-node-connections
+echo ssh-pods \\\'hostname -f \\&\\& ssh master \\"hostname\\"\\\' >> /root/test-node-connections
+
+chown vagrant:vagrant /root/test-node-connections \
+   && chmod 744 /root/test-node-connections \
+   && ln -fn /root/test-node-connections /home/vagrant/test-node-connections
+
+EOF
+# echo alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \\&\\& sudo rm -rf ${HOME}/.kube \\&\\& sudo rm -rf /etc/cni/net.d\\" >> /home/$u/.bashrc;
 $APPEND_ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$APPEND_ETC_BASHRC
 #{BASHRC}  >> /etc/bash.bashrc
@@ -211,20 +219,30 @@ if [ -f /joincluster.sh ]; then echo /joincluster.sh exists for pods to use; fi
 ###
 ' > /root/create_k8s_controlplane_verbose
 
+
+
 s=$(echo -n Create Cluster provisioned @ && date) && sudo su - -c "echo $s >> /etc/vagrant_provisioned_at"
 echo '#!/bin/bash
 
-YAML="./calico.yaml" && if [ ! -f ${YAML} ]; then curl https://docs.projectcalico.org/manifests/calico.yaml -O; fi
+YAML=${1}
+if [[ -z ${K_APISERVER} ]]; then K_APISERVER="#{mstr_ip_pool[0]}"; echo "K_APISERVER not found, using ${K_APISERVER}"; fi
+if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}/#{NETMASK}"; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
+if [ -z ${YAML} ]; then YAML="https://docs.projectcalico.org/manifests/calico.yaml"; fi
+echo -e "\\$K_APISERVER\\t${K_APISERVER}\\n\\$K_PODNETWORK\\t${K_PODNETWORK}"
+
 sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} --pod-network-cidr=${K_PODNETWORK}"
 rm -rf ~vagrant/.kube && mkdir /home/vagrant/.kube 2>/dev/null
 sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config"
 sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube"
-curl https://docs.projectcalico.org/manifests/calico.yaml -O
-systemctl status kubelet|grep Active
+
+echo && systemctl status kubelet|grep Active
+echo "Using YAML @ $YAML"
+
 sudo su - vagrant -c "kubectl create -f ${YAML}"
 sudo su - -c "kubeadm token create --print-join-command > /joincluster.sh"
 
 if [ -f /joincluster.sh ]; then echo /joincluster.sh exists for pods to use; fi
+
 ' > /root/create_k8s_controlplane
 
 chown vagrant:vagrant /root/create_k8s_controlplane_verbose
@@ -246,7 +264,9 @@ EOF
 ### MASTER ###
 ###
    config.vm.define "#{MASTER}" do |subconfig|
-      $PACKAGED_SOFTWARE = $ETC_INITD_NTPSYNC + <<-EOF
+      PORT = 2300
+      $PACKAGED_SOFTWARE =
+         $ETC_INITD_NTPSYNC + <<-EOF
          #{NTP}
          #{DOCKER}
          #{DOCKERCOMPOSE}
@@ -268,20 +288,19 @@ apt-get -y install unzip
       subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
       subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
 apt-get -qq clean
-for u in `ls -C /home`;do echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;done
+for u in `ls -C /home`;do
+   echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;
+   echo 'echo && echo \\$K_APISERVER = $K_APISERVER'  >> /home/$u/.bashrc;
+   echo 'echo \\$K_PODNETWORK = $K_PODNETWORK'  >> /home/$u/.bashrc;
+   echo 'echo \\$KUBECONFIG = $KUBECONFIG'  >> /home/$u/.bashrc;
+done
 echo 'alias ls="ls -Ahltr --color=auto"' >> /root/.bashrc
-echo 'echo && echo \\$K_APISERVER = $K_APISERVER'  >> /etc/bash.bashrc
-echo 'echo \\$K_PODNETWORK = $K_PODNETWORK'  >> /etc/bash.bashrc
-echo 'echo \\$KUBECONFIG = $KUBECONFIG'  >> /etc/bash.bashrc
 date >> /etc/vagrant_provisioned_at
          EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
-
-         EOF
+      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ETC_INITD_NTPSYNC
 ###
 ### MASTER ###
 ###
-      PORT = 2300
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NETMASK, virtualbox__intnet: "anytownusa"
       #subconfig.vm.network "forwarded_port", guest: 31441, host: 80
@@ -300,7 +319,7 @@ date >> /etc/vagrant_provisioned_at
 ### END MASTER ###
 
 ###
-### NODES ###
+### PODS ###
 ###
 
 # $JOIN
@@ -320,9 +339,10 @@ chmod 744 /home/vagrant/join.sh
 
 EOF
 ###
-### NODES ###
+### PODS ###
 ###
    (1..POD_NODE_CT).each do |i|
+      PORT = 2300 + i
       config.vm.define "#{NODE}#{i}" do |subconfig|
          $PACKAGED_SOFTWARE = <<-EOF
             #{DOCKER}
@@ -342,18 +362,20 @@ EOF
          subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
          subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
 date >> /etc/vagrant_provisioned_at
-for u in `ls -C /home`;do echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;done
+for u in `ls -C /home`;do
+ echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;
+ echo alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \\&\\& sudo rm -rf ${HOME}/.kube \\&\\& sudo rm -rf /etc/cni/net.d\\" >> /home/$u/.bashrc;
+done
       EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
 mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join.sh
       EOF
 ###
-### NODES ###
+### PODS
 ###
-         PORT = 2300 + i
+         ip_ndx = i - 1
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
-         ndx = i - 1
-         subconfig.vm.network "private_network", ip: pod_ip_pool[ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
+         subconfig.vm.network "private_network", ip: pod_ip_pool[ip_ndx], netmask: NETMASK, virtualbox__intnet: "anytownusa"
 
          subconfig.vm.box = "#{IMAGE}"
          subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
@@ -364,7 +386,7 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join.sh
          end
       end
    end
-### NODES ###
+### PODS ###
 
 ###
 ### CONTROLLER ###
@@ -390,7 +412,9 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join.sh
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
       subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: $APPEND_ETC_BASHRC + <<-EOF
 apt-get -qq clean
-for u in `ls -C /home`;do echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;done
+for u in `ls -C /home`;do
+ echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;
+done
 date >> /etc/vagrant_provisioned_at
             EOF
       subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $ADHOC
@@ -564,16 +588,20 @@ alias k=\"kubectl\"
 alias kinfoall=\"kubectl get all --all-namespaces --output=wide\"
 alias kinfoallw=\"watch kubectl get all --all-namespaces --output=wide\"
 
-alias kgetpod=\"kubectl get pod\"
-alias kgetpodw=\"watch kubectl get pod\"
+alias kcluster=\"kubectl cluster-info\"
 
-alias kgetpods=\"kubectl get pods --all-namespaces\"
-alias kgetpodsw=\"watch kubectl get pods --all-namespaces\"
+alias   kgetpod=\"kubectl get pod\"
+alias  kgetpods=\"kubectl get pods --all-namespaces\"
+alias   kgetpodw=\"watch kubectl get pod\"
+alias  kgetpodsw=\"watch kubectl get pods --all-namespaces\"
 
-alias kgetnodes=\"kubectl get nodes\"
-alias kgetnodesw=\"watch kubectl get nodes\"
+alias  kgetnode=\"kubectl get node\"
+alias kgetnodes=\"kubectl get node --all-namespaces\"
+alias  kgetnodew=\"watch kubectl get node\"
+alias kgetnodesw=\"watch kubectl get node --all-namespaces\"
 
 alias kgetns=\"kubectl get namespaces --show-labels\"
+
 alias kget=\"kubectl get\"
 alias kgetall=\"kubectl get --all-namespaces --output=wide\"
 alias kdesc=\"kubectl describe\"
