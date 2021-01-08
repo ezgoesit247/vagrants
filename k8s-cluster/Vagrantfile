@@ -15,12 +15,12 @@ CONTROLLER = "controller"
 MASTER = "master"
 NODE = "node"
 
-ROUTE="10.244.0.0"
-ROUTE_NETMASK = 24
+ROUTE="192.168.0.0"
+ROUTE_NETMASK = 16
 POD_NETWORK = "#{ROUTE}/#{ROUTE_NETMASK}"
 
-NODE_PREFIX="10.128.0"
-NODE_NETMASK = 24
+NODE_PREFIX="192.168.0"
+NODE_NETMASK = 16
 mstr_ip_pool = ["#{NODE_PREFIX}.20"]
 mstr_nm_pool = ["#{MASTER}"]
 ctlr_ip_pool = []#["#{NODE_PREFIX}.10"]
@@ -176,11 +176,12 @@ EOF
 
 $SYNCTEST_MASTER_ONLY = <<EOF
 echo #{MSG} Running: \\$SYNCTEST_MASTER_ONLY
-echo -e "#!/bin/bash\nssh-pods 's=\\\`hostname -f\\\` && echo -n \\"master to \\\${s} -> Success\\" && ssh master \\"hostname -f\\"'
+echo -e "#!/bin/bash\nssh-pods 's=\\\`hostname -f\\\` && echo -n \\"\`hostname\` to \\\${s} -> Success\\" && s=\\" and \\\`hostname\\\` back for -> Success\\" && ssh master \\"echo -n \\\\\\"\\\${s}\\\\\\" && hostname -f\\"'
 " > /root/test-node-connections \
    && chown vagrant:vagrant /root/test-node-connections \
    && chmod 744 /root/test-node-connections \
-   && ln -fn /root/test-node-connections /home/vagrant/test-node-connections
+   && ln -fn /root/test-node-connections /home/vagrant/test-node-connections \
+   && /root/test-node-connections
 
 EOF
 
@@ -191,6 +192,8 @@ x=`grep -n "### START BASHRC" /etc/bash.bashrc | head -1 | cut -f1 -d:` \
    && z=`expr $y - $x` \
    && cp -p /etc/bash.bashrc /etc/bash.bashrc.bak \
    && cat>/etc/bash.bashrc<<<`head -n -${z} /etc/bash.bashrc.bak`
+echo export HISTFILE=/vagrant/bash_history  >> /etc/bash.bashrc
+echo "echo -e \\"\\n### Login: \\`date\\` ###\\" >> \\${HISTFILE}"  >> /etc/bash.bashrc
 #{BASHRC}  >> /etc/bash.bashrc
 EOF
 
@@ -225,11 +228,12 @@ $ADHOC = ""
 # =>        Hard links to ~vagrant
 ####################################################
       $CREATE_CLUSTER = <<-EOF
+scripts_ary=()
 echo '#!/bin/bash
 ###### START create_k8s_controlplane_sample ######
 
 if [[ -z ${K_APISERVER} ]]; then K_APISERVER="#{mstr_ip_pool[0]}"; echo "K_APISERVER not found, using ${K_APISERVER}"; fi
-if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
+if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}"; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
 
 YAML="https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
 LOG="${HOME}/cluster_initialized.log"
@@ -255,7 +259,7 @@ if [ -f /joincluster ]; then echo /joincluster exists for pods to use; fi
 
 ### END create_k8s_controlplane_sample ###
 ' > /root/create_k8s_controlplane_sample
-
+scripts_ary+=("create_k8s_controlplane_sample")
 
 
 echo '#!/bin/bash
@@ -267,10 +271,10 @@ K_PODNETWORK="#{POD_NETWORK}"
 
 echo && echo -e "\\$K_APISERVER\\t${K_APISERVER}\\n\\$K_PODNETWORK\\t${K_PODNETWORK}\\n\\$YAML\\t${YAML}"
 if [ -z ${CMD} ];then echo -e "\\tUsage: $(basename \$0) [CMD] [rm YAML]\\n\\tdid you pass create or apply?" && exit 1; fi
-if [ ! -f ./$(basename ${YAML}) ]; then echo Need local YAML getting.....;
+if [ ! -f ${YAML} ]; then echo Need local YAML getting.....;
    curl -s ${YAML} -O && if [ -f ./$(basename ${YAML}) ]; then echo Just got ./$(basename ${YAML}); fi
 exit 2; fi
-echo using local ./$(basename ${YAML})
+echo using local ${YAML}
 
 sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} --pod-network-cidr=${K_PODNETWORK}"
 rm -rf ~vagrant/.kube && mkdir /home/vagrant/.kube 2>/dev/null
@@ -287,13 +291,30 @@ if [ -f /joincluster ]; then echo && echo /joincluster exists for pods to use; f
 
 ### END create_k8s_controlplane ###
 ' > /root/create_k8s_controlplane
+scripts_ary+=("create_k8s_controlplane")
 
-chown vagrant:vagrant /root/create_k8s_controlplane_sample
-chmod 744 /root/create_k8s_controlplane_sample
-ln -fn /root/create_k8s_controlplane_sample /home/vagrant/create_k8s_controlplane_sample
-chown vagrant:vagrant /root/create_k8s_controlplane
-chmod 744 /root/create_k8s_controlplane
-ln -fn /root/create_k8s_controlplane /home/vagrant/create_k8s_controlplane
+
+echo '
+# Install the K8s dashboard
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
+# Create an admin account called k8s-admin
+kubectl --namespace kube-system create serviceaccount k8s-admin
+kubectl create clusterrolebinding k8s-admin --serviceaccount=kube-system:k8s-admin --clusterrole=cluster-admin
+
+# Setup a proxy to your workstation
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep k8s-admin | awk '{print \\$1}')
+
+### END # Install the K8s dashboard ###
+' > /root/install_k8s_dashboard
+scripts_ary+=("install_k8s_dashboard")
+
+
+
+for s in ${scripts_ary[@]}; do
+   chown vagrant:vagrant /root/${s}
+   chmod 744 /root/${s}
+   ln -fn /root/${s} /home/vagrant/${s}
+done
 
 EOF
 ####################################################
@@ -318,9 +339,7 @@ apt-get -y install unzip
       subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + $BIN_RUNSSH1 + <<-EOF
 /bin/bash /etc/init/synchosts.sh
       EOF
-      subconfig.vm.provision "SyncTest", type: "shell", run: "never", name: "SyncTest", inline: $SYNCTEST_MASTER_ONLY + <<-EOF
-/bin/bash /root/test-node-connections
-      EOF
+      subconfig.vm.provision "SyncTest", type: "shell", run: "never", name: "SyncTest", inline: $SYNCTEST_MASTER_ONLY
 ###
 ### MASTER ###
 ###
@@ -343,8 +362,10 @@ for u in `ls -C /home`;do
       && cat>${f}<<<`head -n -${z} ${f}.bak`
    echo '### START BASHRC' >> /${f};
    echo 'alias ls="ls -Ahltr --color=auto"' >> /home/${u}/.bashrc;
+   ln -fsn /vagrant/_shared_assets/ /home/${u}/yaml
 done
 echo 'alias ls="ls -Ahltr --color=auto"' >> /root/.bashrc
+
 date >> /etc/vagrant_provisioned_at
          EOF
 ###
@@ -353,12 +374,13 @@ date >> /etc/vagrant_provisioned_at
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
+      subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
 
       subconfig.vm.box = "#{IMAGE}"
-      subconfig.vm.hostname = "#{MASTER}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.hostname = "#{PURPOSE}-#{MASTER}.#{LIFECYCLE}.#{DOMAIN}"
       subconfig.vm.provider "#{PROVIDER}" do |v|
-         v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-         v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+#         v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+#         v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
          v.name = "#{VM_NAME_MASTER}"
          v.memory = 2048
          v.cpus = 2
@@ -426,7 +448,7 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
          subconfig.vm.network "private_network", ip: pod_ip_pool[ip_ndx], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
 
          subconfig.vm.box = "#{IMAGE}"
-         subconfig.vm.hostname = "#{NODE}#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+         subconfig.vm.hostname = "#{PURPOSE}-#{NODE}#{i}.#{LIFECYCLE}.#{DOMAIN}"
          subconfig.vm.provider "#{PROVIDER}" do |v|
             v.name = "#{VM_NAME_NODE}#{i}"
             v.memory = 1024
@@ -442,7 +464,7 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
    (1..SAND_CT).each do |i|
    config.vm.define "sandbox#{i}" do |subconfig|
       subconfig.vm.box = "#{IMAGE}"
-      subconfig.vm.hostname = "SANDBOX#{i}.#{PURPOSE}.#{LIFECYCLE}.#{DOMAIN}"
+      subconfig.vm.hostname = "#{PURPOSE}-SANDBOX#{i}.#{LIFECYCLE}.#{DOMAIN}"
       subconfig.vm.provider "#{PROVIDER}" do |v|
          v.name = "#{VM_NAME_base}SANDBOX#{i}"
          v.memory = 1024
@@ -452,7 +474,7 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
    end
    end
-#### SEND ANDBOXES #####
+#### SEND SANDBOXES #####
 
 end
 ###
@@ -535,6 +557,11 @@ EOF
 KUBECTL = 'VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing kubectl version: ${K8S_VERSION}")+'
    apt-get install --allow-downgrades -qq \
       kubectl=${K8S_VERSION}'
+
+HELM = '
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash \
+   && cd -
+'
 
 BASHRC = "echo '### START BASHRC
 function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
@@ -646,5 +673,7 @@ echo K_APISERVER=\${K_APISERVER}
 echo K_PODNETWORK=\${K_PODNETWORK}
 echo YAML_FLANNEL=\${YAML_FLANNEL}
 echo YAML_CALICO=\${YAML_CALICO}
+
+echo -n \"kubelet status: \" && systemctl status kubelet|grep --color=never Active
 
 '" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf /joincluster \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'

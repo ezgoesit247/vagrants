@@ -1,4 +1,5 @@
 #!/bin/bash
 
+echo "this destroys, brings up, then does Sync"
 destroy ${@}
 up -p=Sync  ${@}

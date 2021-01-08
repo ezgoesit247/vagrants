@@ -1,5 +1,6 @@
 #!/bin/bash
 
+PROVISIONWITH=Sync,Cluster,Final
 for i in "$@"
 do
 case $i in
