@@ -372,9 +372,9 @@ date >> /etc/vagrant_provisioned_at
 ### MASTER ###
 ###
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
+      subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
-      subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
 
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{PURPOSE}-#{MASTER}.#{LIFECYCLE}.#{DOMAIN}"
