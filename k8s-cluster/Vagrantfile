@@ -229,41 +229,59 @@ $ADHOC = ""
 ####################################################
       $CREATE_CLUSTER = <<-EOF
 scripts_ary=()
+
+echo -e "############ write deploy_wp_mysql ############"
 echo '#!/bin/bash
-###### START create_k8s_controlplane_sample ######
+########################
+###
+### CREATES CONTROL PLANE WITH CALICO
+### JOINS NODE TO CLUSTER
+### CREATES & DEPLOYS APP IN NAMESPACE
+###
+########################
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+ssh-pods-join
+kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
+kubectl apply -k ./yaml/techcraz/
 
-if [[ -z ${K_APISERVER} ]]; then K_APISERVER="#{mstr_ip_pool[0]}"; echo "K_APISERVER not found, using ${K_APISERVER}"; fi
-if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}"; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
-
-YAML="https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
-LOG="${HOME}/cluster_initialized.log"
-echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
-
-echo "running kubeadm init:" | tee -a ${LOG}
-
-sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} \
-   --pod-network-cidr=${K_PODNETWORK}" 2>&1 | tee -a ${LOG}
-systemctl status kubelet|grep Active 2>&1 | tee -a ${LOG}
-
-mkdir /home/vagrant/.kube 2>/dev/null
-sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config" 2>&1 | tee -a ${LOG}
-sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube" 2>&1 | tee -a ${LOG}
-
-echo "kubectl create:" | tee -a ${LOG}
-sudo su - vagrant -c "kubectl create -f ${YAML}" 2>&1 | tee -a ${LOG}
-
-echo "kubeadm token create:" >> ${LOG}
-sudo su - -c "kubeadm token create --print-join-command > /joincluster" 2>&1 | tee -a ${LOG}
-
-if [ -f /joincluster ]; then echo /joincluster exists for pods to use; fi
-
-### END create_k8s_controlplane_sample ###
-' > /root/create_k8s_controlplane_sample
-scripts_ary+=("create_k8s_controlplane_sample")
+' > /root/deploy_wp_mysql
+scripts_ary+=("deploy_wp_mysql")
 
 
+
+echo -e "############ write install_k8s_dashboard - not working"
 echo '#!/bin/bash
-###### START create_k8s_controlplane ######
+########################
+###
+### ?????
+###
+########################
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+
+# Create an admin account called k8s-admin
+kubectl --namespace kube-system create serviceaccount k8s-admin
+kubectl create clusterrolebinding k8s-admin --serviceaccount=kube-system:k8s-admin --clusterrole=cluster-admin
+
+# Setup a proxy to your workstation
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep k8s-admin | awk '{print \\$1}')
+
+' > /root/install_k8s_dashboard
+scripts_ary+=("install_k8s_dashboard")
+
+
+
+echo -e "############ write create_k8s_controlplane ############"
+echo '#!/bin/bash
+########################
+###
+### CREATES CONTROL PLANE
+### WRITES /joincluster FOR DOWNLOAD
+###
+### PARM1: apply | create
+### PARM2: YML - IF NOT LOCAL IE A URL THEN DOWNLOADS AND EXITS
+###
+########################
 CMD=${1}
 YAML=${2}
 K_APISERVER="#{mstr_ip_pool[0]}"
@@ -289,40 +307,61 @@ sudo su - vagrant -c "kubectl ${CMD} -f ${YAML}"
 sudo su - -c "kubeadm token create --print-join-command > /joincluster"
 if [ -f /joincluster ]; then echo && echo /joincluster exists for pods to use; fi
 
-### END create_k8s_controlplane ###
 ' > /root/create_k8s_controlplane
 scripts_ary+=("create_k8s_controlplane")
 
 
-echo'
-### DEPLOY WORDPRESS & MYSQL K8S APP
-
-./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
-ssh-pods-join
-kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
-kubectl apply -k ./yaml/techcraz/
-
-### end DEPLOY WORDPRESS & MYSQL K8S APP ###
-' > /root/deploy_wp_mysql
-scripts_ary+=("deploy_wp_mysql")
-
-echo '
-# Install the K8s dashboard
-kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
-
-# Create an admin account called k8s-admin
-kubectl --namespace kube-system create serviceaccount k8s-admin
-kubectl create clusterrolebinding k8s-admin --serviceaccount=kube-system:k8s-admin --clusterrole=cluster-admin
-
-# Setup a proxy to your workstation
-kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep k8s-admin | awk '{print \\$1}')
-
-### END # Install the K8s dashboard ###
-' > /root/install_k8s_dashboard
-scripts_ary+=("install_k8s_dashboard")
 
 
+
+echo -e "############ write create_k8s_controlplane_sample ############"
+echo '#!/bin/bash
+########################
+###
+### CREATES CONTROL PLANE WITH DEFAULT CALICO YML
+###
+########################
+LOG="${HOME}/cluster_initialized.log"
+if [[ -z ${K_APISERVER} ]]; then K_APISERVER="#{mstr_ip_pool[0]}"; echo "K_APISERVER not found, using ${K_APISERVER}"; fi
+if [[ -z ${K_PODNETWORK} ]]; then K_PODNETWORK="#{POD_NETWORK}"; echo "K_PODNETWORK not found, using ${K_PODNETWORK}"; fi
+
+YAML="https://docs.projectcalico.org/v3.9/manifests/calico.yaml"
+LOG="${HOME}/cluster_initialized.log"
+echo >${LOG} | tee -a ${LOG} && echo -n "Creating Cluster: " | tee -a ${LOG} && date | tee -a ${LOG}
+
+echo "running kubeadm init:" | tee -a ${LOG}
+
+sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} \
+   --pod-network-cidr=${K_PODNETWORK}" 2>&1 | tee -a ${LOG}
+systemctl status kubelet|grep Active 2>&1 | tee -a ${LOG}
+
+mkdir /home/vagrant/.kube 2>/dev/null
+sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config" 2>&1 | tee -a ${LOG}
+sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube" 2>&1 | tee -a ${LOG}
+
+echo "kubectl create:" | tee -a ${LOG}
+sudo su - vagrant -c "kubectl create -f ${YAML}" 2>&1 | tee -a ${LOG}
+
+echo "kubeadm token create:" >> ${LOG}
+sudo su - -c "kubeadm token create --print-join-command > /joincluster" 2>&1 | tee -a ${LOG}
+
+if [ -f /joincluster ]; then echo /joincluster exists for pods to use; fi
+
+' > /root/create_k8s_controlplane_sample
+scripts_ary+=("create_k8s_controlplane_sample")
+
+
+
+echo '#!/bin/bash
+while getopts c: option
+do
+case \"${option}\"
+in
+c) CP=${OPTARG};;
+esac
+done
+' > /root/library
+scripts_ary+=("library")
 
 for s in ${scripts_ary[@]}; do
    chown vagrant:vagrant /root/${s}
