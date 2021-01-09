@@ -294,9 +294,23 @@ if [ -f /joincluster ]; then echo && echo /joincluster exists for pods to use; f
 scripts_ary+=("create_k8s_controlplane")
 
 
+echo'
+### DEPLOY WORDPRESS & MYSQL K8S APP
+
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+ssh-pods-join
+kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
+kubectl apply -k ./yaml/techcraz/
+
+### end DEPLOY WORDPRESS & MYSQL K8S APP ###
+' > /root/deploy_wp_mysql
+scripts_ary+=("deploy_wp_mysql")
+
 echo '
 # Install the K8s dashboard
 kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+
 # Create an admin account called k8s-admin
 kubectl --namespace kube-system create serviceaccount k8s-admin
 kubectl create clusterrolebinding k8s-admin --serviceaccount=kube-system:k8s-admin --clusterrole=cluster-admin
@@ -373,6 +387,7 @@ date >> /etc/vagrant_provisioned_at
 ###
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
+      subconfig.vm.network "forwarded_port", guest: 31254, host: 81
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
 
@@ -592,6 +607,8 @@ alias khelp=\"kubectl api-resources\"
 alias k=\"kubectl\"
 alias kinfoall=\"kubectl get all --all-namespaces --output=wide\"
 alias kinfoallw=\"watch kubectl get all --all-namespaces --output=wide\"
+alias kinfo=\"kubectl get all --output=wide\"
+alias kinfow=\"watch kubectl get all --output=wide\"
 
 alias kcluster=\"kubectl cluster-info\"
 
@@ -620,9 +637,6 @@ alias master=/usr/local/bin/ssh-master
 alias pods=/usr/local/bin/ssh-pods
 echo \"Aliased: master => ssh-master\"
 echo \"Aliased: pods => ssh-pods\"
-echo
-echo -n \"docker: \" && systemctl status docker | grep --color=never Active
-echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 
 export K_APISERVER=#{mstr_ip_pool[0]}
 export K_PODNETWORK=#{POD_NETWORK}
@@ -674,6 +688,8 @@ echo K_PODNETWORK=\${K_PODNETWORK}
 echo YAML_FLANNEL=\${YAML_FLANNEL}
 echo YAML_CALICO=\${YAML_CALICO}
 
-echo -n \"kubelet status: \" && systemctl status kubelet|grep --color=never Active
+echo
+echo -n \"docker: \" && systemctl status docker | grep --color=never Active
+echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 
 '" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf /joincluster \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
