@@ -225,13 +225,14 @@ $ADHOC = ""
 
 # $CREATE_CLUSTER
 ####################################################
-# =>        writes file: /root/create_k8s_controlplane
+# =>        writes file: *
 # =>        Changes owner to vagrant
 # =>        Hard links to ~vagrant
 ####################################################
       $CREATE_CLUSTER = <<-EOF
-scripts_ary=()
+script_list=()
 
+script_list+=("deploy_wp_mysql")
 echo -e "############ write deploy_wp_mysql ############"
 echo '#!/bin/bash
 ########################
@@ -241,16 +242,16 @@ echo '#!/bin/bash
 ### CREATES & DEPLOYS APP IN NAMESPACE
 ###
 ########################
-./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+./controlplane apply yaml/calico_3.17.apiv1.yaml
 ssh-pods-join
 kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
 kubectl apply -k ./yaml/techcraz/
 
 ' > /root/deploy_wp_mysql
-scripts_ary+=("deploy_wp_mysql")
 
 
 
+script_list+=("install_k8s_dashboard")
 echo -e "############ write install_k8s_dashboard - not working"
 echo '#!/bin/bash
 ########################
@@ -269,11 +270,11 @@ kubectl create clusterrolebinding k8s-admin --serviceaccount=kube-system:k8s-adm
 kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep k8s-admin | awk '{print \\$1}')
 
 ' > /root/install_k8s_dashboard
-scripts_ary+=("install_k8s_dashboard")
 
 
 
-echo -e "############ write create_k8s_controlplane ############"
+script_list+=("controlplane")
+echo -e "############ write controlplane ############"
 echo '#!/bin/bash
 ########################
 ###
@@ -309,13 +310,13 @@ sudo su - vagrant -c "kubectl ${CMD} -f ${YAML}"
 sudo su - -c "kubeadm token create --print-join-command > /joincluster"
 if [ -f /joincluster ]; then echo && echo /joincluster exists for pods to use; fi
 
-' > /root/create_k8s_controlplane
-scripts_ary+=("create_k8s_controlplane")
+' > /root/controlplane
 
 
 
 
 
+script_list+=("create_k8s_controlplane_sample")
 echo -e "############ write create_k8s_controlplane_sample ############"
 echo '#!/bin/bash
 ########################
@@ -350,7 +351,13 @@ sudo su - -c "kubeadm token create --print-join-command > /joincluster" 2>&1 | t
 if [ -f /joincluster ]; then echo /joincluster exists for pods to use; fi
 
 ' > /root/create_k8s_controlplane_sample
-scripts_ary+=("create_k8s_controlplane_sample")
+
+
+for script in ${script_list[@]}; do
+   chown vagrant:vagrant /root/${script}
+   chmod 744 /root/${script}
+   ln -fn /root/${script} /home/vagrant/${script}
+done
 
 
 
@@ -363,14 +370,7 @@ c) CP=${OPTARG};;
 esac
 done
 ' > /root/library
-scripts_ary+=("library")
-
-
-for script in ${scripts_ary[@]}; do
-   chown vagrant:vagrant /root/${s}
-   chmod 744 /root/${s}
-   ln -fn /root/${s} /home/vagrant/${s}
-done
+#script_list+=("library")
 
 EOF
 ####################################################
@@ -400,8 +400,9 @@ MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
       subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{MASTER_SCRIPT}"
       subconfig.vm.provision "Software", type: "shell", run: "once", name: "Software", inline: <<-EOF
 apt-get -qq install unzip
+#{CONTAINERD}
+#{CONTAINER_CONFIG}
 #{K8S}
-#{DOCKER}
       EOF
       subconfig.vm.provision "bashrc", type: "shell", run: "once", name: "bashrc", inline: $APPEND_ETC_BASHRC
       subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
@@ -590,8 +591,51 @@ DOCKER = 'DOCKER_VERSION="' + "#{DOCKER_VERSION}" + '" && echo ' + msg("Installi
          docker-ce-cli=${DOCKER_VERSION} \
          containerd.io'
 
-
 CONTAINERD = 'echo ' + msg("Installing CONTAINERD")+'
+apt-get -qq update
+   if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+      && apt-key fingerprint 0EBFCD88 \
+      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+      && apt-get -qq update \
+      && apt-get install -qq \
+         apt-transport-https \
+         ca-certificates \
+         gnupg2 \
+         software-properties-common \
+         containerd.io'
+
+CONTAINER_CONFIG ='
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF
+
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+   sudo modprobe overlay
+   sudo modprobe br_netfilter
+
+   sudo sed -i "/swap/d" /etc/fstab && sudo swapoff -a
+   sudo sysctl --system
+   sudo mkdir -p /etc/containerd
+   sudo containerd config default | sudo tee /etc/containerd/config.toml
+   sudo systemctl restart containerd
+'
+
+CONTAINER_CONFIG1 ='
+cat >/etc/sysctl.d/kubernetes.conf<<EOF &&
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+EOF
+   sysctl --system >/dev/null 2>&1 \
+      && sed -i "/swap/d" /etc/fstab && swapoff -a'
+CONTAINERD1 = 'echo ' + msg("Installing CONTAINERD")+'
 tee /etc/modules-load.d/containerd.conf <<EOF
 overlay
 br_netfilter
@@ -613,7 +657,7 @@ apt-get -qq update
       && apt-get install -qq \
          apt-transport-https \
          ca-certificates \
-         gnupg-agent \
+         gnupg2 \
          software-properties-common \
          containerd.io
 mkdir -p /etc/containerd
@@ -625,14 +669,9 @@ DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
    curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
       && chmod +x /usr/local/bin/docker-compose'
 
+
+
 K8S = 'K8S_VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing k8s version: ${K8S_VERSION}")+'
-cat >/etc/sysctl.d/kubernetes.conf<<EOF &&
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
-EOF
-   sysctl --system >/dev/null 2>&1 \
-      && sed -i "/swap/d" /etc/fstab && swapoff -a
    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list \
       && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
       && apt-get -qq update \
@@ -713,6 +752,7 @@ export K_APISERVER=#{mstr_ip_pool[0]}
 export K_PODNETWORK=#{POD_NETWORK}
 export YAML_FLANNEL=\"https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml\"
 export YAML_CALICO=\"https://docs.projectcalico.org/manifests/calico.yaml\"
+export YAML_LOCAL=\"${HOME}/yaml/calico_3.17.apiv1.yaml\"
 #export YAML_=\"\"
 
 
@@ -758,6 +798,7 @@ echo K_APISERVER=\${K_APISERVER}
 echo K_PODNETWORK=\${K_PODNETWORK}
 echo YAML_FLANNEL=\${YAML_FLANNEL}
 echo YAML_CALICO=\${YAML_CALICO}
+echo YAML_LOCAL=\${YAML_LOCAL}
 
 echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
