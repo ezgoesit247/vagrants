@@ -3,9 +3,9 @@
 # k8s-cluster
 
 ln -fsn ../empty.sh ./empty.sh
-ln -fsn empty.sh master.sh
-ln -fsn empty.sh node.sh
-ln -fsn empty.sh controller.sh
+ln -fsn ./empty.sh ./master.sh
+ln -fsn ./empty.sh ./node.sh
+ln -fsn ./empty.sh ./controller.sh
 ln -fsn ../root_key.sh ./root_key.sh
 ln -fsn ubuntu.k8s.sh ./simple.sh
 ln -fsn ../box.hosts_sync.sh ./sync.hosts.sh

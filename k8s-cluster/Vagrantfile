@@ -187,14 +187,16 @@ EOF
 
 $APPEND_ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$APPEND_ETC_BASHRC
-x=`grep -n "### START BASHRC" /etc/bash.bashrc | head -1 | cut -f1 -d:` \
-   && y=`cat /etc/bash.bashrc|wc -l` \
+f=/etc/bash.bashrc
+echo '### START BASHRC' >> ${f}
+x=`grep -n "### START BASHRC" ${f} | head -1 | cut -f1 -d:` \
+   && y=`cat ${f}|wc -l` \
    && z=`expr $y - $x` \
-   && cp -p /etc/bash.bashrc /etc/bash.bashrc.bak \
-   && cat>/etc/bash.bashrc<<<`head -n -${z} /etc/bash.bashrc.bak`
-echo export HISTFILE=/vagrant/bash_history  >> /etc/bash.bashrc
-echo "echo -e \\"\\n### Login: \\`date\\` ###\\" >> \\${HISTFILE}"  >> /etc/bash.bashrc
-#{BASHRC}  >> /etc/bash.bashrc
+   && cp -p ${f} ${f}.bak \
+   && cat>${f}<<<`head -n -${z} ${f}.bak`
+echo export HISTFILE=/vagrant/bash_history  >> ${f}
+echo "echo -e \\"\\n### Login: \\`date\\` ###\\" >> \\${HISTFILE}"  >> ${f}
+#{BASHRC}  >> ${f}
 EOF
 
 $GENKEY = <<EOF
@@ -211,7 +213,7 @@ apt-get -qq update
 #{PYTHON}
 EOF
 
-$WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
+$WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + $BIN_RUNSSH1 + <<-EOF
    date >> /etc/vagrant_provisioned_at
 EOF
 
@@ -378,18 +380,12 @@ EOF
 ### MASTER ###
 ###
    config.vm.define "#{MASTER}" do |subconfig|
-      PORT = 2300
-      $PACKAGED_SOFTWARE =
-         $ETC_INITD_NTPSYNC + <<-EOF
-         #{NTP}
-         #{DOCKER}
-         #{DOCKERCOMPOSE}
-         #{K8S}
-         #{KUBECTL}
-apt-get -y install unzip
+MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
+      PORT = 2300 + MIRROR_PORT_ADD
+      $NTP = $ETC_INITD_NTPSYNC + <<-EOF
+#{NTP}
       EOF
-      subconfig.vm.provision "bashrc", type: "shell", run: "never", name: "bashrc", inline: $APPEND_ETC_BASHRC
-      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + $BIN_RUNSSH1 + <<-EOF
+      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $WRITE_SYNC + <<-EOF
 /bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "SyncTest", type: "shell", run: "never", name: "SyncTest", inline: $SYNCTEST_MASTER_ONLY
@@ -401,19 +397,24 @@ apt-get -y install unzip
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{MASTER_SCRIPT}"
-      subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $PACKAGED_SOFTWARE
-      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC + $APPEND_ETC_BASHRC
-      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER + $APPEND_ETC_BASHRC
+      subconfig.vm.provision "Software", type: "shell", run: "once", name: "Software", inline: <<-EOF
+apt-get -qq install unzip
+#{K8S}
+#{DOCKER}
+      EOF
+      subconfig.vm.provision "bashrc", type: "shell", run: "once", name: "bashrc", inline: $APPEND_ETC_BASHRC
+      subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
+      subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
       subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
 apt-get -qq clean
 for u in `ls -C /home`;do
    f=/home/${u}/.bashrc;
+   echo '### START BASHRC' >> ${f}
    x=`grep -n "### START BASHRC" ${f} | head -1 | cut -f1 -d:` \
       && y=`cat ${f}|wc -l` \
       && z=`expr $y - $x` \
       && cp -p ${f} ${f}.bak \
       && cat>${f}<<<`head -n -${z} ${f}.bak`
-   echo '### START BASHRC' >> /${f};
    echo 'alias ls="ls -Ahltr --color=auto"' >> /home/${u}/.bashrc;
    ln -fsn /vagrant/_shared_assets/ /home/${u}/yaml
 done
@@ -424,9 +425,11 @@ date >> /etc/vagrant_provisioned_at
 ###
 ### MASTER ###
 ###
+      if ! PURPOSE.include? "mirror"
+         subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
+         subconfig.vm.network "forwarded_port", guest: 31254, host: 81
+      end
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
-      subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
-      subconfig.vm.network "forwarded_port", guest: 31254, host: 81
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
 
@@ -439,7 +442,9 @@ date >> /etc/vagrant_provisioned_at
          v.memory = 2048
          v.cpus = 2
       end
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: $BIN_RUNSSH1
+      subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: <<-EOF
+#{CONTAINERD}
+EOF
    end
 ### END MASTER ###
 
@@ -468,11 +473,8 @@ EOF
 ###
    (1..POD_CT).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
-      PORT = 2300 + i
-         $PACKAGED_SOFTWARE = <<-EOF
-            #{DOCKER}
-            #{K8S}
-         EOF
+MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
+      PORT = 2300 + i + MIRROR_PORT_ADD
          subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
 /bin/bash /etc/init/synchosts.sh
       EOF
@@ -481,17 +483,20 @@ EOF
          subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
          subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
          subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{NODE_SCRIPT}"
-         subconfig.vm.provision "Hook", type: "shell", run: "once", name: "Hook", inline: $PACKAGED_SOFTWARE
+         subconfig.vm.provision "Software", type: "shell", run: "once", name: "Software", inline: <<-EOF
+#{K8S}
+#{DOCKER}
+         EOF
          subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
          subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
          subconfig.vm.provision "Final", type: "shell", run: "once", name:"Final", inline: <<-EOF
-date >> /etc/vagrant_provisioned_at
 for u in `ls -C /home`;do
  echo 'alias ls="ls -Ahltr --color=auto"' >> /home/$u/.bashrc;
  echo alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \\&\\& sudo rm -rf /joincluster \\&\\& sudo rm -rf ${HOME}/.kube \\&\\& sudo rm -rf /etc/cni/net.d\\" >> /home/$u/.bashrc;
+ date >> /etc/vagrant_provisioned_at
 done
       EOF
-      subconfig.vm.provision "AdHoc", type: "shell", run: "never", name: "AdHoc", inline: <<-EOF
+      subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: <<-EOF
 mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
       EOF
 ###
@@ -580,10 +585,38 @@ DOCKER = 'DOCKER_VERSION="' + "#{DOCKER_VERSION}" + '" && echo ' + msg("Installi
       && apt-get install -qq \
          docker-ce=${DOCKER_VERSION} \
          docker-ce-cli=${DOCKER_VERSION} \
-         containerd.io \
-      && systemctl enable docker \
-      && systemctl start docker \
-      && usermod -aG docker vagrant'
+         containerd.io'
+
+
+CONTAINERD = 'echo ' + msg("Installing CONTAINERD")+'
+tee /etc/modules-load.d/containerd.conf <<EOF
+overlay
+br_netfilter
+EOF
+modprobe overlay
+modprobe br_netfilter
+tee /etc/sysctl.d/kubernetes.conf<<EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+EOF
+sysctl --system
+apt-get -qq update
+   if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
+   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+      && apt-key fingerprint 0EBFCD88 \
+      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+      && apt-get -qq update \
+      && apt-get install -qq \
+         apt-transport-https \
+         ca-certificates \
+         gnupg-agent \
+         software-properties-common \
+         containerd.io
+mkdir -p /etc/containerd
+containerd config default  /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo systemctl enable containerd'
 
 DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
    curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
@@ -592,8 +625,8 @@ DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
 K8S = 'K8S_VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing k8s version: ${K8S_VERSION}")+'
 cat >/etc/sysctl.d/kubernetes.conf<<EOF &&
 net.bridge.bridge-nf-call-ip6tables = 1
-net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
 EOF
    sysctl --system >/dev/null 2>&1 \
       && sed -i "/swap/d" /etc/fstab && swapoff -a
@@ -607,10 +640,6 @@ EOF
          kubernetes-cni
    systemctl enable kubelet >/dev/null 2>&1
    systemctl start kubelet >/dev/null 2>&1'
-
-KUBECTL = 'VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing kubectl version: ${K8S_VERSION}")+'
-   apt-get install --allow-downgrades -qq \
-      kubectl=${K8S_VERSION}'
 
 HELM = '
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash \

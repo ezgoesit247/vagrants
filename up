@@ -12,5 +12,5 @@ done
 
 echo -n "Executing: vagrant up ${@}"; if [[ ! -z ${PROVISIONWITH} ]]; then echo -n " then provisioning with ${PROVISIONWITH} "; fi; echo
 if [ ${#} -gt 0 ];
-   then time vagrant up ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi; vagrant provision --provision-with SyncTest ${@};
+   then time vagrant up --parallel ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi; vagrant provision --provision-with SyncTest ${@};
 else echo -e " Usage: up [-p=PROV1,PROV2...] BOX1 [BOX2]...\nThis runs vagrant up, then optional provision afterwards"; fi
