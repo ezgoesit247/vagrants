@@ -1,5 +1,15 @@
 #!/bin/bash
 
 echo "this destroys, brings up, then does Sync"
-destroy ${@}
-up -p=Sync  ${@}
+if [ ${#} -eq 0 ]; then
+   p=`cat POD_CT` && m=`cat MSTR_CT` && i=0 && m=0 && pods= && master=
+   while [ $i -lt ${p} ]; do
+      i=`expr ${i} + 1` && pods="${pods} node${i}"
+   done
+   boxes="master ${pods}"
+   CMD="vagrant destroy -f ${boxes}" && ${CMD}
+   CMD="up" && time ${CMD}
+else
+   destroy ${@}
+   time up -p=Sync ${@}
+fi

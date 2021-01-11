@@ -431,7 +431,7 @@ date >> /etc/vagrant_provisioned_at
 ###
       if ! PURPOSE.include? "mirror"
          subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
-         subconfig.vm.network "forwarded_port", guest: 31254, host: 81
+         subconfig.vm.network "forwarded_port", guest: 32586, host: 80
       end
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
@@ -488,8 +488,9 @@ MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
          subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
          subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{NODE_SCRIPT}"
          subconfig.vm.provision "Software", type: "shell", run: "once", name: "Software", inline: <<-EOF
+#{CONTAINERD}
+#{CONTAINER_CONFIG}
 #{K8S}
-#{DOCKER}
          EOF
          subconfig.vm.provision "Join", type: "shell", run: "once", name: "Join", inline: $JOIN
          subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
@@ -635,35 +636,6 @@ net.ipv4.ip_forward = 1
 EOF
    sysctl --system >/dev/null 2>&1 \
       && sed -i "/swap/d" /etc/fstab && swapoff -a'
-CONTAINERD1 = 'echo ' + msg("Installing CONTAINERD")+'
-tee /etc/modules-load.d/containerd.conf <<EOF
-overlay
-br_netfilter
-EOF
-modprobe overlay
-modprobe br_netfilter
-tee /etc/sysctl.d/kubernetes.conf<<EOF
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
-EOF
-sysctl --system
-apt-get -qq update
-   if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
-   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-      && apt-key fingerprint 0EBFCD88 \
-      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-      && apt-get -qq update \
-      && apt-get install -qq \
-         apt-transport-https \
-         ca-certificates \
-         gnupg2 \
-         software-properties-common \
-         containerd.io
-mkdir -p /etc/containerd
-containerd config default  /etc/containerd/config.toml
-sudo systemctl restart containerd
-sudo systemctl enable containerd'
 
 DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
    curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
@@ -802,6 +774,7 @@ echo YAML_LOCAL=\${YAML_LOCAL}
 
 echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
+echo -n \"containerd: \" && systemctl status containerd | grep --color=never Active
 echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 
 '" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf /joincluster \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'

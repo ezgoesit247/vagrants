@@ -2,7 +2,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wordpress
-  namespace: techcraz
   labels:
     app: wordpress
 spec:
@@ -16,8 +15,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: wp-pv-claim-tz
-  namespace: techcraz
+  name: wp-pv-claim
   labels:
     app: wordpress
 spec:
@@ -26,13 +24,12 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/var/www/html-tz"
+    path: "/var/www/html"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: wp-pv-claim-tz
-  namespace: techcraz
+  name: wp-pv-claim
   labels:
     app: wordpress
 spec:
@@ -46,7 +43,6 @@ apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
   name: wordpress
-  namespace: techcraz
   labels:
     app: wordpress
 spec:
@@ -71,15 +67,15 @@ spec:
         - name: WORDPRESS_DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: mysql-pwd
+              name: mysql-pass
               key: password
         ports:
         - containerPort: 80
           name: wordpress
         volumeMounts:
         - name: wordpress-persistent-storage
-          mountPath: /var/www/html-tz
+          mountPath: /var/www/html
       volumes:
       - name: wordpress-persistent-storage
         persistentVolumeClaim:
-          claimName: wp-pv-claim-tz
+          claimName: wp-pv-claim

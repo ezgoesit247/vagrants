@@ -1,5 +1,5 @@
 #!/bin/bash
-
+source ${HOME}/bin/library
 for i in "$@"
 do
 case $i in
@@ -10,7 +10,21 @@ case $i in
 esac
 done
 
+if [ ${#} -eq 0 ]; then
+   p=`cat POD_CT` && m=`cat MSTR_CT` && i=0 && m=0 && pods= && master=
+   while [ $i -lt ${p} ]; do
+      i=`expr ${i} + 1` && pods="${pods} node${i}"
+   done
+   boxes="master ${pods}"
+   CMD="vagrant up --parallel ${boxes}" \
+      && inf "Running ${CMD}" && ${CMD} && pass "Just ran ${CMD}"
+   CMD="vagrant provision ${boxes} --provision-with=Sync" \
+      && inf "Running ${CMD}" && ${CMD} && pass "Just ran ${CMD}"
+   CMD="vagrant provision master --provision-with=SyncTest" \
+      && inf "Running ${CMD}" && ${CMD} && pass "Just ran ${CMD}"
+   exit 0
+fi
 echo -n "Executing: vagrant up ${@}"; if [[ ! -z ${PROVISIONWITH} ]]; then echo -n " then provisioning with ${PROVISIONWITH} "; fi; echo
 if [ ${#} -gt 0 ];
-   then time vagrant up --parallel ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi; vagrant provision --provision-with SyncTest ${@};
+   then vagrant up --parallel ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi;
 else echo -e " Usage: up [-p=PROV1,PROV2...] BOX1 [BOX2]...\nThis runs vagrant up, then optional provision afterwards"; fi

@@ -1,5 +1,5 @@
 #!/bin/bash
-
+source ${HOME}/bin/library
 PROVISIONWITH=Sync,Cluster,Final
 for i in "$@"
 do
@@ -10,9 +10,16 @@ case $i in
         ;;
 esac
 done
-
-echo "Executing: vagrant reload ${@}; vagrant provision -provision-with ${PROVISIONWITH}"
-if [ ${#} -gt 0 ]; then vagrant halt ${@}; if [ -n "${PROVISIONWITH}" ]; then up -p=${PROVISIONWITH} ${@}; else up ${@}; fi; fi
-
+if [ ${#} -eq 0 ]; then
+   p=`cat POD_CT` && m=`cat MSTR_CT` && i=0 && m=0 && pods= && master=
+   while [ $i -lt ${p} ]; do
+      i=`expr ${i} + 1` && pods="${pods} node${i}"
+   done
+   boxes="master ${pods}"
+   CMD="vagrant reload ${boxes}" && inf ${CMD} && time ${CMD}
+else
+   echo "Executing: vagrant reload ${@}; vagrant provision -provision-with ${PROVISIONWITH}"
+   if [ ${#} -gt 0 ]; then vagrant halt ${@}; if [ -n "${PROVISIONWITH}" ]; then up -p=${PROVISIONWITH} ${@}; else up ${@}; fi; fi
+fi
 
 #if [ ${#} -gt 0 ]; then time vagrant up ${@} && if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${@} ${PROVISIONWITH}; fi; else echo -e " Usage: up [-p=PROV1,PROV2...] BOX1 [BOX2]...\nThis command runs vagrant up, then vagrant provision afterwards"; fi
