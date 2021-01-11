@@ -431,7 +431,8 @@ date >> /etc/vagrant_provisioned_at
 ###
       if ! PURPOSE.include? "mirror"
          subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
-         subconfig.vm.network "forwarded_port", guest: 32586, host: 80
+         subconfig.vm.network "forwarded_port", guest: 30937, host: 30937
+         subconfig.vm.network "forwarded_port", guest: 32370, host: 32370
       end
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
