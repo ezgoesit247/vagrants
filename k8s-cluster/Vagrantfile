@@ -188,6 +188,8 @@ EOF
 $APPEND_ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$APPEND_ETC_BASHRC
 bashrc=/etc/bash.bashrc
+library=/etc/bash.library
+
 echo '### START BASHRC' >> ${bashrc}
 x=`grep -n "### START BASHRC" ${bashrc} | head -1 | cut -f1 -d:` \
    && y=`cat ${bashrc}|wc -l` \
@@ -196,7 +198,8 @@ x=`grep -n "### START BASHRC" ${bashrc} | head -1 | cut -f1 -d:` \
    && cat>${bashrc}<<<`head -n -${z} ${bashrc}.bak`
 echo export HISTFILE=/vagrant/bash_history  >> ${bashrc}
 echo "echo -e \\"\\n### Login: \\`date\\` ###\\" >> \\${HISTFILE}"  >> ${bashrc}
-#{BASHRC}  >> ${bashrc}
+#{BASHRC} >> ${bashrc}
+#{LIBRARY} > ${library}
 EOF
 
 $GENKEY = <<EOF
@@ -235,6 +238,7 @@ script_list=()
 script_list+=("deploy_wp_mysql")
 echo -e "############ write deploy_wp_mysql ############"
 echo '#!/bin/bash
+source /etc/bash.library
 ########################
 ###
 ### CREATES CONTROL PLANE WITH CALICO
@@ -242,13 +246,40 @@ echo '#!/bin/bash
 ### CREATES & DEPLOYS APP IN NAMESPACE
 ###
 ########################
-./controlplane apply yaml/calico_3.17.apiv1.yaml
-ssh-pods-join
-kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
-kubectl apply -k ./yaml/techcraz/
+
+function go {
+   ./controlplane apply yaml/calico_3.17.apiv1.yaml
+   ssh-pods-join
+   kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
+   kubectl apply -k ./yaml/techcraz/
+
+#   kubectl apply -k ./yaml/
+}
+function setup {
+   root=
+   thelist=()
+   thelist+=("${root}/var/www")
+   thelist+=("${root}/var/www/html")
+   thelist+=("${root}/var/www/html-tz")
+   thelist+=("${root}/var/lib/mysql")
+   thelist+=("${root}/var/lib/mysql-tz")
+   #echo ${thelist[@]}
+   for d in ${thelist[@]}; do ssh-pods "sudo mkdir ${d} 2> /dev/null"; done
+}
+
+function remove {
+   local CMD="sudo rm -rf /var/www/html 2> /dev/null;sudo rm -rf /var/www/html-tz 2> /dev/null;sudo rm -rf /var/lib/mysql 2> /dev/null;sudo rm -rf /var/lib/mysql-tz 2> /dev/null"
+   ssh-pods "$CMD"
+   ssh-pods "ls -d /var/www/html* ; ls -d /var/lib/mysql*"
+}
+function test_dirs {
+   ssh-pods "hostname && ls -d /var/www && ls -d /var/www/html* && ls -d /var/lib/mysql && echo || echo -e \\\"FAIL\\n\\\"" || return 1
+}
+
+setup && go || fail "$(basename $0)"
+
 
 ' > /root/deploy_wp_mysql
-
 
 
 script_list+=("install_k8s_dashboard")
@@ -259,15 +290,10 @@ echo '#!/bin/bash
 ### ?????
 ###
 ########################
-kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+kubectl apply -f ./yaml/kubernetes-dashboard.v2.0.5.yaml
+kubectl apply -f ./yaml/dashboard-service-np.yaml
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
 
-# Create an admin account called k8s-admin
-kubectl --namespace kube-system create serviceaccount k8s-admin
-kubectl create clusterrolebinding k8s-admin --serviceaccount=kube-system:k8s-admin --clusterrole=cluster-admin
-
-# Setup a proxy to your workstation
-kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep k8s-admin | awk '{print \\$1}')
 
 ' > /root/install_k8s_dashboard
 
@@ -386,7 +412,7 @@ MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
       $NTP = $ETC_INITD_NTPSYNC + <<-EOF
 #{NTP}
       EOF
-      subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $WRITE_SYNC + <<-EOF
+      subconfig.vm.provision "SyncAll", type: "shell", run: "never", name: "SyncAll", inline: $ETC_HOSTS + $WRITE_SYNC + <<-EOF
 /bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "SyncTest", type: "shell", run: "never", name: "SyncTest", inline: $SYNCTEST_MASTER_ONLY
@@ -429,10 +455,11 @@ date >> /etc/vagrant_provisioned_at
 ###
 ### MASTER ###
 ###
-      if ! PURPOSE.include? "mirror"
+      if ! PURPOSE.include? "mirror" # ! NOT MIRROR !
          subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
          subconfig.vm.network "forwarded_port", guest: 30937, host: 30937
          subconfig.vm.network "forwarded_port", guest: 32370, host: 32370
+         subconfig.vm.network "forwarded_port", guest: 30002, host: 30002
       end
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
@@ -447,9 +474,9 @@ date >> /etc/vagrant_provisioned_at
          v.memory = 2048
          v.cpus = 2
       end
-      subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: <<-EOF
-#{CONTAINERD}
-EOF
+      subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: $APPEND_ETC_BASHRC + <<-EOF
+            #{NOTHING}
+            EOF
    end
 ### END MASTER ###
 
@@ -480,7 +507,7 @@ EOF
       config.vm.define "#{NODE}#{i}" do |subconfig|
 MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
       PORT = 2300 + i + MIRROR_PORT_ADD
-         subconfig.vm.provision "Sync", type: "shell", run: "never", name: "Sync", inline: $ETC_HOSTS + $ETC_INIT_SYNCHOSTS + <<-EOF
+         subconfig.vm.provision "SyncAll", type: "shell", run: "never", name: "SyncAll", inline: $ETC_HOSTS + $WRITE_SYNC + <<-EOF
 /bin/bash /etc/init/synchosts.sh
       EOF
          subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
@@ -525,7 +552,7 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
 
 ###########
 #### SANDBOXES #####
-   SAND_CT=2
+   SAND_CT=0
    (1..SAND_CT).each do |i|
    config.vm.define "sandbox#{i}" do |subconfig|
       subconfig.vm.box = "#{IMAGE}"
@@ -661,7 +688,7 @@ curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bas
    && cd -
 '
 
-BASHRC = "echo '### START BASHRC
+LIBRARY = "echo '
 function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
 function green  { color 4 2 \"${*}\"; }
 function yellow { color 0 3 \"${*}\"; }
@@ -682,7 +709,11 @@ function getrunning { systemctl list-units --type=service --state=running; }
 function verify {
    if [ -f ${1} ]; then echo ${1} exists
    else echo fail; return 1; fi
-}
+}'"
+
+BASHRC = "echo '### START BASHRC
+source /etc/bash.library
+
 
 alias watch=\"watch \"
 
@@ -726,6 +757,7 @@ export K_PODNETWORK=#{POD_NETWORK}
 export YAML_FLANNEL=\"https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml\"
 export YAML_CALICO=\"https://docs.projectcalico.org/manifests/calico.yaml\"
 export YAML_LOCAL=\"${HOME}/yaml/calico_3.17.apiv1.yaml\"
+export YAML_DASHBOARD=https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml
 #export YAML_=\"\"
 
 
@@ -734,10 +766,10 @@ info $(grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release)
 blue \"IP Route:\" && echo && ip route
 blue \"Interfaces:\" && echo && ifconfig|grep -A2 enp
 
-if command -v java > /dev/null 2>&1; then blue \"java:\"; java -version; else yellow \"No Java\"; fi;
-if command -v javac > /dev/null 2>&1; then blue \"javac:\"; javac -version; else yellow \"No JDK\"; fi;
-if command -v mvn > /dev/null 2>&1; then blue \"maven:\"; mvn --version; else yellow \"No Maven\"; fi;
-if command -v hadoop > /dev/null; then blue \"Hadoop:\";hadoop version; fi
+if command -v java > /dev/null 2>&1; then blue \"java:\" && java -version; else yellow \"No Java\"; fi;
+if command -v javac > /dev/null 2>&1; then blue \"javac:\" && javac -version; else yellow \"No JDK\"; fi;
+if command -v mvn > /dev/null 2>&1; then blue \"maven:\" && mvn --version; else yellow \"No Maven\"; fi;
+if command -v hadoop > /dev/null; then blue \"Hadoop:\" && hadoop version; fi && echo;
 if systemctl --all --type service | grep -q ntp.service; then \
    if systemctl list-units --type=service --state=inactive|grep ntp.service| grep -q dead; then
       sudo systemctl start ntp.service; fi
@@ -757,25 +789,26 @@ if systemctl --all --type service | grep -q ntp.service; then \
    fi
 fi
 
-if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; echo; fi;
-if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; echo; fi;
-if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; echo; fi;
-if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; echo; fi;
-#if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; echo; fi;
+if command -v kubectl > /dev/null 2>&1; then cyan \"kubectl:\" && kubectl version --short --client; else yellow \"No kubectl\"; fi;
+if command -v kubelet > /dev/null 2>&1; then cyan \"kubelet:\" && kubelet --version; else yellow \"No kubelet\"; fi;
+if command -v kubeadm > /dev/null 2>&1; then cyan \"kubeadm:\" && kubeadm version --output short; else yellow \"No kubeadm\"; fi;
+if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version && sudo docker run --rm hello-world 2> /dev/null | grep -o \"Hello from Docker!\"; else yellow \"No Docker\"; fi;
+#if command -v helm > /dev/null 2>&1; then cyan \"helm:\" && helm version --short; else yellow \"No helm\"; fi && echo;
 if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;
-if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; echo; fi;
+if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; fi && echo;
 
 echo && grey \"Session Variables\" && echo
-echo KUBECONFIG=\${KUBECONFIG}
-echo K_APISERVER=\${K_APISERVER}
-echo K_PODNETWORK=\${K_PODNETWORK}
-echo YAML_FLANNEL=\${YAML_FLANNEL}
-echo YAML_CALICO=\${YAML_CALICO}
-echo YAML_LOCAL=\${YAML_LOCAL}
-
+cyan \"KUBECONFIG:\" && echo \"  \${KUBECONFIG}\"
+cyan \"K_APISERVER:\" && echo \" \${K_APISERVER}\"
+cyan \"K_PODNETWORK:\" && echo \"\${K_PODNETWORK}\"
+cyan \"YAML_FLANNEL:\" && echo \"\${YAML_FLANNEL}\"
+cyan \"YAML_CALICO:\" && echo \" \${YAML_CALICO}\"
+cyan \"YAML_LOCAL:\" && echo \"  \${YAML_LOCAL}\"
 echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
 echo -n \"containerd: \" && systemctl status containerd | grep --color=never Active
 echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 
 '" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf /joincluster \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
+
+NOTHING = ""

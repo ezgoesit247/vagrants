@@ -14,4 +14,4 @@ echo "Executing: vagrant provision ${@} ${PROVISIONWITH}"
 if [ ${#} -gt 0 ];
  then time vagrant provision ${@} ${PROVISIONWITH} && vagrant provision ${@} --provision-with SyncTest;
  else if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${PROVISIONWITH} && vagrant provision ${@} --provision-with SyncTest; fi;
-echo " Usage: prov [-p=PROV1,PROV2...] BOX1 [BOX2]..."; fi
+ fi

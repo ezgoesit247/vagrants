@@ -11,5 +11,6 @@ if [ ${#} -eq 0 ]; then
    CMD="up" && time ${CMD}
 else
    destroy ${@}
-   time up -p=Sync ${@}
+   time up ${@}
 fi
+prov -p=SyncAll

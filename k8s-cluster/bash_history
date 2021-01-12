@@ -1,0 +1,962 @@
+kinfoallw
+ary=("create_k8s_controlplane_sample")
+ARRAY=()
+ARRAY+=('foo')
+ARRAY+=('bar')
+ARRAY+=('foo')
+ary=("create_k8s_controlplane_sample")
+ary+=("install_k8s_dashboard")
+echo ${ary[0]}
+echo ${ary[1]}
+for x in ${ary}; do echo $x; done
+for x in ${ary[@]}; do echo $x; done
+ls
+ssh-pods 's=`hostname -f` && echo -n "master to ${s} -> Success" && s=" and `hostname` back for Success -> " && ssh master "r=\"$s && `hostname -f`\" && echo $r"'
+ls
+mkdir howto_oracle && cd $_
+curl -s https://k8s.io/examples/application/deployment.yaml -O
+ls
+vi deployment.yaml
+hostname
+kinfoall
+cat create_k8s_controlplane
+systemctl status kubelet|grep Active
+echo -n \"kubelet is \" && systemctl status kubelet|grep Active
+echo -n kubelet status: " && systemctl status kubelet|grep Active
+echo -n "kubelet status: " && systemctl status kubelet|grep Active
+systemctl status kubelet
+systemctl stop kubelet
+sudo systemctl stop kubelet
+systemctl status kubelet
+getservice
+getservices
+man grep
+echo -n kubelet status: " && systemctl status kubelet|grep Active
+echo -n "kubelet status: " && systemctl status kubelet|grep Active
+echo -n "kubelet status: " && systemctl status kubelet|grep --color=never Active
+getservices|grep kube
+getservices
+echo -n "kubelet status: " && systemctl status kubelet|grep --color=never Active
+systemctl start kubelet
+sudo systemctl start kubelet
+systemctl start kubelet
+echo -n "kubelet status: " && systemctl status kubelet|grep --color=never Active
+getservices|grep kube
+echo -n "kubelet status: " && systemctl status kubelet|grep --color=never Active
+vi /etc/bash.bashrc
+sudo vi /etc/bash.bashrc
+kgetns
+ls
+cd howto_oracle/
+cd ..
+./create_k8s_controlplane apply yaml/calico_3.5.yaml
+ls
+vi ./create_k8s_controlplane
+./create_k8s_controlplane apply yaml/calico_3.5.yaml
+kreset
+ls
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.techcraz.yaml
+kreset
+vi yaml/calico_3.17.apiv1.techcraz.yaml
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.techcraz.yaml
+kreset
+vi yaml/calico_3.17.apiv1.techcraz.yaml
+vi yaml/calico_3.17.apiv1.yaml
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.techcraz.yaml
+vi vagrant@k8s-cluster-master:~$ ./create_k8s_controlplane apply
+vi yaml/calico_3.17.apiv1.techcraz.yaml
+kns
+kgetns
+kreset
+kgetns
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+hostname -i
+vi /etc/hosts
+ls /
+ssh-pods-join
+cat create_k8s_controlplane
+kdrain node1 node2
+kget nodes
+kdrain k8s-cluster-node1 k8s-cluster-node2
+kdelete k8s-cluster-node1 k8s-cluster-node2
+ssh-pods-reset
+kreset
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml && getns
+kgetns
+kubectl api-resources --namespaced=true
+kubectl api-resources --namespaced=false
+kubectl api-resources --namespaced=false|grep node
+Login: Fri Jan 8 20:45:12 UTC 2021
+vi /etc/bash.bashrc
+
+### Login: Fri Jan  8 20:49:13 UTC 2021
+grep -A4 '###' /etc/bash.bashrc
+
+### Login: Fri Jan  8 20:49:57 UTC 2021 ###
+
+### Login: Fri Jan  8 20:59:31 UTC 2021 ###
+
+### Login: Fri Jan  8 20:59:31 UTC 2021 ###
+
+### Login: Fri Jan  8 20:59:40 UTC 2021 ###
+
+### Login: Fri Jan  8 20:59:40 UTC 2021 ###
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+ssh-pods-join
+ls
+kinfoallw
+kget service
+kget deploy
+kget deployment
+kget deployments
+kget deploy -A
+k delete deploy kubernetes-dashboard
+kinfoallw
+getns
+kgetns
+
+### Login: Fri Jan  8 21:36:22 UTC 2021 ###
+
+### Login: Fri Jan  8 21:36:22 UTC 2021 ###
+
+### Login: Fri Jan  8 21:36:33 UTC 2021 ###
+
+### Login: Fri Jan  8 21:36:33 UTC 2021 ###
+kinfo -n kubernetes-dashboard
+k delete -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+kinfow -n kubernetes-dashboard
+
+### Login: Fri Jan  8 21:46:06 UTC 2021 ###
+vi /etc/bash.bashrc
+sudo vi /etc/bash.bashrc
+vi /etc/bash.bashrc
+sudo vi /etc/bash.bashrc
+
+### Login: Fri Jan  8 21:53:17 UTC 2021 ###
+ls /var/lib/
+ls /var/lib/mysql
+mkdir /var/lib/mysql
+ssh-pods "sudo mkdir /var/lib/mysql"
+ssh-pods "ls -d /var/www/html"
+ssh-pods "sudo mkdir /var/www/html"
+ssh-pods "sudo mkdir /var/www && mkdir $_/html"
+ssh-pods "sudo mkdir /var/www/html"
+ssh-pods "ls -d /var/www/html"
+kubectl delete -k ./yaml/
+kdrain k8s-cluster-node2 k8s-cluster-node1
+kreset
+ls yaml/calico_3.17.apiv1.yaml
+curl -s https://docs.projectcalico.org/manifests/calico.yaml -O
+diff calico.yaml yaml/calico_3.17.apiv1.yaml
+systemctl start kubelet
+sudo systemctl start kubelet
+sudo systemctl status kubelet
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+ssh-pods-join
+kubectl apply -k ./yaml/
+kubectl api-resources|grep volume
+kget persistentvolumes
+kubectl get secrets
+kget pv
+kget pvc
+kget pods
+kget services
+kinfoallw
+kinfow
+kinfoallw
+kinfow
+kinfoallw
+
+### Login: Fri Jan  8 22:36:47 UTC 2021 ###
+kinfow
+
+### Login: Fri Jan  8 22:45:02 UTC 2021 ###
+
+### Login: Fri Jan  8 22:56:14 UTC 2021 ###
+kinfow
+kgetns
+kinfo -n techcraz
+k delete namespace techcraz
+kinfo -n techcraz
+kinfow -n techcraz
+kinfoallw
+kinfow -n techcraz
+kinfow -n default
+kinfow -n techcraz
+kinfow -n default
+kinfow -n techcraz
+kinfow -n default
+kinfow -n kube-system
+k
+k apply yaml/namespace.techcraz.yaml
+k apply -f yaml/namespace.techcraz.yaml
+k delete -f yaml/namespace.techcraz.yaml
+kubectl apply -k ./yaml/techcraz/
+kubectl apply -f ./yaml/techcraz
+kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
+kubectl apply -k ./yaml/techcraz/
+k delete nd techcraz
+k delete ns techcraz
+kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml && kubectl apply -k ./yaml/techcraz/
+kubectl delete -k ./yaml/techcraz/
+kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
+ssh-pods "sudo mkdir /var/lib/mysql-tz && sudo mkdir /var/www/html-tz"
+kubectl apply -k ./yaml/techcraz/
+kubectl delete -k ./yaml/techcraz/
+kubectl apply -k ./yaml/techcraz/
+kdesc pod/wordpress-mysql-5d89b4494f-dx229
+kget pod -n techcraz
+kdesc pod wordpress-mysql-5d89b4494f-dx229
+kubectl describe pods
+kubectl describe pods -n techcraz
+kubectl delete -k ./yaml/techcraz/
+kubectl apply -k ./yaml/techcraz/
+kget pod -n techcraz
+kubectl describe pods -n techcraz
+kubectl get secrets
+kubectl describe pods -n techcraz
+
+### Login: Sat Jan  9 00:12:38 UTC 2021 ###
+
+### Login: Sat Jan  9 00:13:13 UTC 2021 ###
+
+### Login: Sat Jan  9 15:12:17 UTC 2021 ###
+
+### Login: Sat Jan  9 15:12:17 UTC 2021 ###
+
+### Login: Sat Jan  9 15:13:11 UTC 2021 ###
+
+### Login: Sat Jan  9 15:13:11 UTC 2021 ###
+ls
+./deploy_wp_mysql
+ssh-pods-join
+ssh-pods-reset
+ssh-pods-join
+sudo su - -c "kubeadm token create --print-join-command > /joincluster"
+ssh-pods-join
+kreset
+./create_k8s_controlplane
+./create_k8s_controlplane_sample
+ssh-pods-join
+ssh-pods-reset
+for m in k8s-cluster-node1 k8s-cluster-node2; do kdrain ${m} && kdelete ${m}; done
+ssh-pods-join
+ssh-pods-reset
+kreset
+ls
+./deploy_wp_mysql -c yes
+
+### Login: Sat Jan  9 17:46:47 UTC 2021 ###
+
+### Login: Sat Jan  9 17:46:47 UTC 2021 ###
+
+### Login: Sat Jan  9 18:40:33 UTC 2021 ###
+
+### Login: Sat Jan  9 18:40:33 UTC 2021 ###
+k delete -k ./yaml/techcraz/
+k delete -f -f ./yaml/techcraz/namespace.techcraz.yaml
+k delete -f ./yaml/techcraz/namespace.techcraz.yaml
+./deploy_wp_mysql
+k delete -k ./yaml/techcraz/ && k delete -f ./yaml/techcraz/namespace.techcraz.yaml
+ls
+./deploy_wp_mysql
+./deploy_wp_mysql -c
+./deploy_wp_mysql -c that
+echo $CP
+./deploy_wp_mysql -c that
+./deploy_wp_mysql -c
+./deploy_wp_mysql -c W
+vi library
+./deploy_wp_mysql
+./deploy_wp_mysql -c d
+./deploy_wp_mysql
+ps -ef|grep dockerd
+ps -ef|grep containerd
+rm -rf /usr/bin/dockerd
+sudo rm -rf /usr/bin/dockerd
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/recommended/kubernetes-dashboard.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.7/components.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml
+ls
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml
+curl -s kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml
+curl -s kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -O
+ls
+curl -s https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -O
+ls
+vi recommended.yaml
+curl -s kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -O
+curs -s https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -O
+curl -s https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -O
+ls
+curl -s https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -o yaml/dashboard.v2.0.5.yaml
+ls yaml
+ls yaml/
+curl -s https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.7/components.yaml
+curl https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.7/components.yaml
+clear
+kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.7/components.yaml
+kubectl proxy
+sudo kubectl proxy
+kinfoall
+cat deploy_wp_mysql
+ls
+kinfow -n techcraz
+ssh-pods-reset
+kinfoallw
+ls
+car library
+cat library
+vi library
+cat>test.sh<<EOF
+#!/bin/bash
+source ./library
+echo \${CP}
+EOF
+
+cat library
+vi library
+. ./test.sh -cp this
+vi test.sh
+. ./test.sh -c this
+. ./test.sh
+vi test.sh
+ls
+chmod 744 test.sh
+ls
+test.sh
+./test.sh
+./test.sh -u this
+vi test.sh
+./test.sh -cp this
+vi test.sh
+./test.sh -c this
+cat test.sh ./library
+cat test.sh > ./library
+vi ./library
+vi test.sh
+vi library
+./test.sh -c that
+cat library
+kinfoallw
+ls
+rm test.sh
+vi deploy_wp_mysql
+kinfow -n techcraz
+kinfow -n default
+kinfow -n kube-system
+kinfoallw
+kinfoall
+
+ls
+cat id_rsa
+ssh node1
+
+### Login: Sun Jan 10 00:36:35 UTC 2021 ###
+
+### Login: Sun Jan 10 00:38:19 UTC 2021 ###
+
+### Login: Sun Jan 10 00:38:32 UTC 2021 ###
+
+### Login: Sun Jan 10 00:40:02 UTC 2021 ###
+cat ./deploy_wp_mysql
+kinfoall
+
+### Login: Sun Jan 10 00:40:21 UTC 2021 ###
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+
+### Login: Sun Jan 10 00:40:24 UTC 2021 ###
+kinfoall
+kinfoallw
+ssh node1 "sudo apt-get -qq install kubeadm=1.20.2-00"
+ssh node1 "sudo apt-get -qq install kubeadm=1.20.0-00"
+ssh node1 "sudo apt-get -qq install --allow-downgrades kubectl=1.20.0-00"
+ssh node1 "sudo apt-get -qq install kubernetes-cni"
+ssh node1 "sudo systemctl enable kubelet"
+ssh node1 "sudo systemctl start kubelet"
+ssh node1
+ssh node1 "sudo apt-get install container-io"
+ssh node1 "sudo apt-get install containerd-io"
+
+### Login: Sun Jan 10 01:00:19 UTC 2021 ###
+
+### Login: Sun Jan 10 01:08:02 UTC 2021 ###
+
+### Login: Sun Jan 10 01:08:35 UTC 2021 ###
+./deploy_wp_mysql
+kreset
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+
+### Login: Sun Jan 10 01:18:05 UTC 2021 ###
+
+### Login: Sun Jan 10 01:24:13 UTC 2021 ###
+
+### Login: Sun Jan 10 01:24:31 UTC 2021 ###
+
+### Login: Sun Jan 10 01:26:19 UTC 2021 ###
+cat deploy_wp_mysql
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+ssh-pods-join
+kinfow -n techcraz
+
+### Login: Sun Jan 10 01:27:35 UTC 2021 ###
+
+### Login: Sun Jan 10 01:27:52 UTC 2021 ###
+
+### Login: Sun Jan 10 01:49:47 UTC 2021 ###
+./deploy_wp_mysql
+cat deploy_wp_mysql
+kinfow -n techcraz
+
+### Login: Sun Jan 10 01:57:01 UTC 2021 ###
+ps -ef|grep docker
+
+### Login: Sun Jan 10 02:11:07 UTC 2021 ###
+
+### Login: Sun Jan 10 02:11:44 UTC 2021 ###
+
+### Login: Sun Jan 10 02:21:06 UTC 2021 ###
+
+### Login: Sun Jan 10 02:21:33 UTC 2021 ###
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+sudo sudo tee /etc/modules-load.d/containerd.conf <<EOF
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+sudo sysctl --system
+sudo mkdir -p /etc/containerd
+sudo su -
+sudo su - -c "containerd config default  /etc/containerd/config.toml"
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+ps -ef|grep containerd
+systemctl status containerd
+kreset
+./deploy_wp_mysql
+
+### Login: Sun Jan 10 02:36:03 UTC 2021 ###
+
+### Login: Sun Jan 10 02:40:26 UTC 2021 ###
+cat deploy_wp_mysql
+./create_k8s_controlplane apply yaml/calico_3.17.apiv1.yaml
+kinfow -n techcraz
+kinfow
+kinfoallw
+kinfow -n techcraz
+cat deploy_wp_mysql
+ssh-pods-join
+kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
+kubectl apply -k ./yaml/techcraz/
+
+### Login: Sun Jan 10 14:14:37 UTC 2021 ###
+
+### Login: Sun Jan 10 14:19:06 UTC 2021 ###
+
+### Login: Sun Jan 10 14:24:11 UTC 2021 ###
+ps -ef|grep container
+ps -ef|grep containerd
+ps -ef|grep docker
+ps -ef|grep dockerd
+dpkg
+dpkg -l
+dpkg -l|grep dkms
+dpkg -l|grep headers
+uname -r
+dpkg -l|grep build
+ls /sbin/vboxconfig
+ls sudo /sbin/vboxconfig
+man modprobe
+lsmod
+lsmod|grep over
+modinfo {overlay}
+modinfo overlay
+lsmod|grep br_netfilter
+modinfo br_netfilter
+
+### Login: Sun Jan 10 14:36:33 UTC 2021 ###
+
+### Login: Sun Jan 10 14:48:03 UTC 2021 ###
+export PS1="\[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\[\033[1;32m\]\u\[\033[0m\]@\[\033[1;31m\]\h:\[\033[0;37m\]\w\[\033[0m\]\$ "
+vi /root/.bashrx
+vi /root/.bashrc
+tail -f /root/.bashrc
+vi /root/.bashrc
+
+### Login: Sun Jan 10 15:09:17 UTC 2021 ###
+echo $PS1
+tail -f /root/.bashrc
+
+### Login: Sun Jan 10 15:11:56 UTC 2021 ###
+ps -ef|grep dockerd
+ps -ef|grep containerd
+getservice
+getactive
+systemctl stop docker.service
+sudo systemctl stop docker.service
+sudo systemctl stop docker.servic
+sudo systemctl stop docker.service
+sudo systemctl stop kubelet.service
+sudo systemctl stop containerd
+getactive
+cat /etc/modules-load.d/containerd.conf
+sudo tee /etc/modules-load.d/containerd.conf <<EOF
+overlay
+br_netfilter
+EOF
+
+cat /etc/modules-load.d/containerd.conf
+ls /etc/modules-load.d/
+sudo modprobe overlay
+sudo modprobe br_netfilter
+cat /etc/sysctl.d/kubernetes.conf
+sudo sysctl --system
+sudo sysctl --system|grep containerd
+sudo sysctl --system|grep container
+sudo mkdir -p /etc/containerd
+sudo su -
+
+### Login: Sun Jan 10 17:00:51 UTC 2021 ###
+
+### Login: Sun Jan 10 17:16:43 UTC 2021 ###
+
+### Login: Sun Jan 10 17:17:42 UTC 2021 ###
+containerd config default  /etc/containerd/config.toml
+ls /etc/containerd/
+cat /etc/containerd/config.toml
+sudo su -
+ls
+systemctl status containerd
+ls /etc/containerd/config.toml
+sudo su -
+ls /etc/containerd/config.toml
+systemctl status containerd
+sudo systemctl enable containerd
+]sudo systemctl enable containerd
+sudo systemctl enable containerd
+systemctl status containerd
+sudo systemctl start
+sudo systemctl start containerd
+systemctl status containerd
+lsmod | grep br_netfilter
+lsmode|grep ebtable_broute
+lsmod|grep ebtable_broute
+sudo systemctl enable kubelet
+sudo systemctl status kubelet
+date
+sudo systemctl restart kubelet
+sudo systemctl status kubelet
+sudo kubeadm config images pull
+docker
+docker info
+sudo docker info
+sudo vi /etc/containerd/config.toml
+sudo kubeadm config images pull
+sudo vi /etc/containerd/config.toml
+sudo kubeadm config images pull
+ls /etc/modules-load.d/containerd.conf
+cat /etc/modules-load.d/containerd.conf
+cat /etc/sysctl.d/kubernetes.conf
+mv /etc/sysctl.d/kubernetes.conf /etc/sysctl.d/99-kubernetes.conf
+sudo mv /etc/sysctl.d/kubernetes.conf /etc/sysctl.d/99-kubernetes.conf
+sudo  vi /etc/sysctl.d/99-kubernetes.conf
+sudo sysctl --system
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+sudo systemctl restart containerd
+sudo systemctl status containerd.service
+ls /var/liv/docker
+ls /var/lib/docker
+sudo ls /var/lib/docker
+sudo ls -d /var/lib/docker
+sudo rm -rf  /var/lib/docker
+sudo systemctl restart containerd
+sudo systemctl status containerd.service
+journalctl -xe
+systemctl disable containerd
+sudo systemctl disable containerd
+sudo systemctl enable containerd
+sudo systemctl start containerd
+systemctl status containerd.service
+sudo  vi /etc/sysctl.d/99-kubernetes.conf
+sudo vi /etc/containerd/config.toml
+ls /run/containerd/containerd.sock
+date
+sudo systemctl restart containerd
+sudo systemctl status containerd.service
+ls
+vi create_k8s_controlplane
+ls yaml/
+echo $YAML
+export YAML=${HOME}/yaml/calico_3.17.apiv1.yaml
+echo $YAML
+echo YAML_LOCAL=\${YAML_LOCAL}
+echo YAML_LOCAL=${YAML}
+export YAML_LOCAL=${YAML}
+ls
+mv create_k8s_controlplane controlplane
+./controlplane ${YAML_LOCAL}
+
+### Login: Sun Jan 10 19:01:06 UTC 2021 ###
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+cat <<EOF | sudo tee /etc/sysctl.d/99-kubernetes.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+sudo sysctl --system
+sudo rm -rf /etc/sysctl.d/kubernetes.conf
+sudo sysctl --system
+sudo mkdir -p /etc/containerd
+sudo containerd config default | sudo tee /etc/containerd/config.toml
+sudo systemctl restart containerd
+./controlplane apply yaml/calico_3.17.apiv1.yaml
+
+### Login: Mon Jan 11 00:04:29 UTC 2021 ###
+
+### Login: Mon Jan 11 00:05:34 UTC 2021 ###
+systemctl status containerd | grep --color=never Active
+sudo su -
+sudo echo 'systemctl status containerd | grep --color=never Active' >> /etc/bash.bashrc
+sudo su - -c  "echo 'systemctl status containerd | grep --color=never Active' >> /etc/bash.bashrc"
+
+### Login: Mon Jan 11 00:07:00 UTC 2021 ###
+sudo su - -c  "echo -n containerd: && echo 'systemctl status containerd | grep --color=never Active' >> /etc/bash.bashrc"
+sudo su - -c  "'echo -n containerd: && echo systemctl status containerd | grep --color=never Active' >> /etc/bash.bashrc"
+
+### Login: Mon Jan 11 00:08:55 UTC 2021 ###
+sudo vi /etc/bash.bashrc
+
+### Login: Mon Jan 11 00:09:52 UTC 2021 ###
+
+### Login: Mon Jan 11 00:17:18 UTC 2021 ###
+ls
+./deploy_wp_mysql
+kinfoq -n techcraz
+kinfow -n techcraz
+kinfoallw
+kinfow -n techcraz
+
+### Login: Mon Jan 11 00:48:29 UTC 2021 ###
+kinfow -n techcraz
+
+### Login: Mon Jan 11 18:28:41 UTC 2021 ###
+
+### Login: Mon Jan 11 18:34:46 UTC 2021 ###
+kinfow -n techcraz
+cat ./deploy_wp_mysql
+kubectl delete -k ./yaml/techcraz/
+kubectl apply -k ./yaml/techcraz/
+
+### Login: Mon Jan 11 18:41:12 UTC 2021 ###
+kinfow -n techcraz
+
+### Login: Mon Jan 11 18:46:56 UTC 2021 ###
+
+### Login: Mon Jan 11 20:09:02 UTC 2021 ###
+kinfow -n techcraz
+kget service
+kget service -A
+kubectl delete -k ./yaml/techcraz/
+kubectl apply -k ./yaml/
+kubectl apply -k ./yaml/techcraz/
+
+### Login: Mon Jan 11 20:21:04 UTC 2021 ###
+
+### Login: Mon Jan 11 20:31:08 UTC 2021 ###
+kget service
+kget service -A
+kinfoall -n techcraz
+kinfo -n techcraz
+kubectl delete -k ./yaml/techcraz/
+kdelete ns techcraz
+kdelete namespace techcraz
+kget ns
+kinfow -A
+kubectl -n kubernetes-dashboard describe service kubernetes-dashboard
+kinfoall
+
+### Login: Mon Jan 11 21:04:01 UTC 2021 ###
+
+### Login: Mon Jan 11 21:07:56 UTC 2021 ###
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+ssh node1
+ssh node2
+cd /tmp
+;s
+ls
+ls vagrant-shell
+mkdir work
+cd work/
+mkdir mysql
+rm -rf *
+ld
+ls
+mkdir /var && mkdir $_/lib
+mkdir var && mkdir $_/lib
+if [ ! -d var/www ];mkdir var/www; fi
+ls
+ls var/
+if [ ! -d var/www ];then mkdir var/www; fi
+ls var/
+ary=()
+ary+="${root}/var/www"
+echo ${ary[0]}
+ary+="${root}/var/www/html-tz"
+echo ${ary[0]}
+echo ${ary[1]}
+unset ary
+list
+the_list=()
+the_list+=("${root}/var/www","${root}/var/www/html","${root}/var/www/html-tz","${root}/var/lib-mysql","${root}/var/lib/mysql-tz")
+echo ${ary[1]}
+echo ${this_list[1]}
+echo $root
+root=.
+thelist=()
+thelist+=("${root}/var/www")
+thelist+=("${root}/var/www/html")
+thelist+=("${root}/var/www/html-tz")
+thelist+=("${root}/var/lib/mysql")
+thelist+=("${root}/var/lib/mysql-tz")
+for d in ${thelist[@]}; do echo $d; done
+echo ${thelist[@]}
+for d in ${thelist[@]}; do if [ ! -d ${d} ]; then mkdir ${d}; fi; done
+
+### Login: Mon Jan 11 21:51:06 UTC 2021 ###
+
+### Login: Mon Jan 11 22:06:21 UTC 2021 ###
+ssh-pods
+ssh-pods 'root=/ \'
+ssh-pods 'root=/   && thelist=()   && thelist+=("${root}/var/www"   && thelist+=("${root}/var/www/html")   && thelist+=("${root}/var/www/html-tz")   && thelist+=("${root}/var/lib/mysql")   && thelist+=("${root}/var/lib/mysql-tz")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then mkdir ${d}; fi; done'
+ssh-pods 'root=   && thelist=()   && thelist+=("${root}/var/www")   && thelist+=("${root}/var/www/html")   && thelist+=("${root}/var/www/html-tz")   && thelist+=("${root}/var/lib/mysql")   && thelist+=("${root}/var/lib/mysql-tz")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done'
+
+### Login: Mon Jan 11 22:21:58 UTC 2021 ###
+ssh-pods 'root=   && thelist=()   && thelist+=("${root}/var/www")   && thelist+=("${root}/var/www/html")   && thelist+=("${root}/var/www/html-tz")   && thelist+=("${root}/var/lib/mysql")   && thelist+=("${root}/var/lib/mysql-tz")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done'
+
+### Login: Tue Jan 12 00:58:06 UTC 2021 ###
+cd /tmp/work/
+ls
+root=.
+thelist=()
+thelist+=("${root}/var/www")
+thelist+=("${root}/var/www/html")
+thelist+=("${root}/var/www/html-tz")
+thelist+=("${root}/var/lib/mysql")
+thelist+=("${root}/var/lib/mysql-tz")
+for d in ${thelist[@]}; do echo $d; done
+echo ${thelist[@]}
+for d in ${thelist[@]}; do if [ ! -d ${d} ]; then mkdir ${d}; fi; done
+ls var
+ls var/www/
+ls var/lib/
+ls
+mv -rf /var/*
+rm -rf /var/*
+rm -rf var/*
+ls
+root=.
+thelist=()
+thelist+=("${root}/var/www")
+thelist+=("${root}/var/www/html")
+thelist+=("${root}/var/www/html-tz")
+thelist+=("${root}/var/lib/mysql")
+thelist+=("${root}/var/lib/mysql-tz")
+for d in ${thelist[@]}; do echo $d; done
+echo ${thelist[@]}
+for d in ${thelist[@]}; do if [ ! -d ${d} ]; then mkdir ${d}; fi; done
+mkdir var/lib
+ls var
+rm -rf var/www var/lib/*
+root=.
+thelist=()
+thelist+=("${root}/var/www")
+thelist+=("${root}/var/www/html")
+thelist+=("${root}/var/www/html-tz")
+thelist+=("${root}/var/lib/mysql")
+thelist+=("${root}/var/lib/mysql-tz")
+for d in ${thelist[@]}; do echo $d; done
+echo ${thelist[@]}
+for d in ${thelist[@]}; do if [ ! -d ${d} ]; then mkdir ${d}; fi; done
+ls var
+ls var/lib
+ls var/www
+cd
+ls
+vi deploy_wp_mysql
+ls
+less deploy_wp_mysql
+vi deploy_wp_mysql
+./deploy_wp_mysql
+whereis ssh-pods
+vi  /usr/local/bin/ssh-pods
+vi deploy_wp_mysql
+cp deploy_wp_mysql deploy_wp_mysql.bak
+diff deploy_wp_mysql deploy_wp_mysql.bak
+tail -f deploy_wp_mysql
+vi deploy_wp_mysql
+./deploy_wp_mysql
+cat deploy_wp_mysql
+CMD="root=   && thelist=()   && thelist+=(\"${root}/var/www\")   && thelist+=(\"${root}/var/www/html\")   && thelist+=(\"${root}/var/www/html-tz\")   && thelist+=(\"${root}/var/lib/mysql\")   && thelist+=(\"${root}/var/lib/mysql-tz\")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done"
+ssh-pods "${CMD}"
+echo $root
+./deploy_wp_mysql
+vi deploy_wp_mysql
+./deploy_wp_mysql
+cat deploy_wp_mysql
+CMD="root=\"\"   && thelist=()   && thelist+=(\"${root}/var/XXX\")   && thelist+=(\"${root}/var/XXX/html\")   && thelist+=(\"${root}/var/XXX/html-tz\")   && thelist+=(\"${root}/var/lib/ZZZ\")   && thelist+=(\"${root}/var/lib/ZZZ-tz\")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done"
+echo #CMD
+echo $CMD
+ssh-pods $CMD
+ssh-pods "$CMD"
+ssh-pods $CMD
+ls
+vi deploy_wp_mysql
+./deploy_wp_mysql
+cat deploy_wp_mysql
+unset thelist
+CMD="root=\"\"   && thelist=()   && thelist+=(\"${root}/var/XXX\")   && thelist+=(\"${root}/var/XXX/html\")   && thelist+=(\"${root}/var/XXX/html-tz\")   && thelist+=(\"${root}/var/lib/ZZZ\")   && thelist+=(\"${root}/var/lib/ZZZ-tz\")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done"
+ssh-pods ${CMD}
+echo ${thelist[@]}
+CMD='root=   && thelist=()   && thelist+=("${root}/var/www")   && thelist+=("${root}/var/www/html")   && thelist+=("${root}/var/www/html-tz")   && thelist+=("${root}/var/lib/mysql")   && thelist+=("${root}/var/lib/mysql-tz")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done'
+CMD='root=   && thelist=()   && thelist+=("${root}/var/XXX")   && thelist+=("${root}/var/XXX/html")   && thelist+=("${root}/var/XXX/html-tz")   && thelist+=("${root}/var/lib/ZZZ")   && thelist+=("${root}/var/lib/ZZZ-tz")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then sudo mkdir ${d}; fi; done'
+echo ${thelist[@]}
+echo $CMD
+ssh-pods ${CMD}
+ssh-pods "sudo mkdir /var/XXX"
+sudo-pods 'ls'
+ssh-pods 'ls /'
+ssh-pods 'hostname && ls /var/'
+ssh-pods 'hostname -i && ls /var/'
+ssh-pods "sudo mkdir /var/XXX"
+ssh-pods "sudo mkdir /var/XXX && mkdir /var/XXX/html"
+ssh-pods "sudo mkdir /var/XXX 2>/dev/null && mkdir /var/XXX/html"
+vi deploy_wp_mysql
+./deploy_wp_mysql
+vi deploy_wp_mysql
+./deploy_wp_mysql
+vi deploy_wp_mysql
+./deploy_wp_mysql
+vi deploy_wp_mysql
+./deploy_wp_mysql
+vi deploy_wp_mysql
+ssh-pods "sudo rm -rf /var/XXX"
+./deploy_wp_mysql
+vi /usr/local/bin/ssh-pods
+kreset
+ssh node1
+cat ./deploy_wp_mysql
+./deploy_wp_mysql
+kdelete -k ./yaml/
+k delete -k ./yaml/
+kdelete -k ./yaml/techcraz/
+k delete -k ./yaml/techcraz/
+kdrain k8s-cluster-node1 k8s-cluster-node2 k8s-cluster-node3
+kreset
+ssh-pods "sudo kreset"
+getalias
+showalias
+echo $cho ${BASH_ALIASES[kreset]
+echo echo ${BASH_ALIASES[kreset]
+echo echo ${BASH_ALIASES[kreset]}
+echo ${BASH_ALIASES[kreset]}
+ssh-pods "$(${BASH_ALIASES[kreset]})"
+ssh-pods "${BASH_ALIASES[kreset]}"
+./deploy_wp_mysql
+man echo
+./deploy_wp_mysql
+vi /usr/local/bin/ssh-pods
+./deploy_wp_mysql
+cat  ./deploy_wp_mysql
+vi  ./deploy_wp_mysql
+cat deploy_wp_mysql
+kinfoall
+k apply -f ./yaml/techcraz/namespace.techcraz.yaml && k apply -k ./yaml/techcraz/
+kinfow -n default
+kinfow -n techcraz
+k delete -k ./yaml/techcraz/ && k delete -k ./yaml/techcraz/namespace.techcraz.yaml
+kget ns
+cat ./yaml/techcraz/namespace.techcraz.yaml
+k apply -f ./yaml/techcraz/namespace.techcraz.yaml
+kinfow -n techcraz
+kinfow -n techcraz -n default
+kinfo -n techcraz && kinfo -n default
+ls
+mkdir var && mkdir $_/lib
+ls var
+root=.    && thelist=()   && thelist+=("${root}/var/www")   && thelist+=("${root}/var/www/html")   && thelist+=("${root}/var/www/html-tz")   && thelist+=("${root}/var/lib/mysql")   && thelist+=("${root}/var/lib/mysql-tz")   && for d in ${thelist[@]}; do if [ ! -d ${d} ]; then mkdir ${d}; fi; done
+ls var
+ls var/lib
+ls var/www/
+vi script.sh
+kinfoall
+kinfoallw
+
+### Login: Tue Jan 12 01:35:02 UTC 2021 ###
+
+### Login: Tue Jan 12 01:35:52 UTC 2021 ###
+kreset
+curl https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml -O
+
+
+### Login: Tue Jan 12 01:39:52 UTC 2021 ###
+kubectl apply -f ./yaml/kubernetes-dashboard.v2.0.5.yaml
+kubectl apply -f ./yaml/dashboard-service-np.yaml
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+kubectl -n kubernetes-dashboard describe service kubernetes-dashboard
+kinfoall
+ls
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+kinfo
+kinfoall
+ls
+cat deploy_wp_mysql
+./deploy_wp_mysql
+ls
+cat deploy_wp_mysql
+
+### Login: Tue Jan 12 14:18:19 UTC 2021 ###
+
+### Login: Tue Jan 12 14:32:22 UTC 2021 ###
+kubectl version --help
+kubectl version --short --client;
+kubectl version --short
+kubectl version --client;
+kubectl version --client=true
+kubectl version --client
+kubectl version --client=true
+kubectl version --client --short
+kubectl version --client --short=false
+
+### Login: Tue Jan 12 15:03:41 UTC 2021 ###
+ls /etc/library
+
+### Login: Tue Jan 12 15:21:42 UTC 2021 ###
+ls /etc/bash.library 
+
+### Login: Tue Jan 12 15:23:01 UTC 2021 ###
+
+### Login: Tue Jan 12 15:23:32 UTC 2021 ###
+
+### Login: Tue Jan 12 15:23:55 UTC 2021 ###
+cat /etc/bash.library
+sudo su -
+
+### Login: Tue Jan 12 15:24:47 UTC 2021 ###
+kinfoall
+ls
+cat deploy_wp_mysql 
+
+### Login: Tue Jan 12 15:24:56 UTC 2021 ###
+
+### Login: Tue Jan 12 15:31:55 UTC 2021 ###

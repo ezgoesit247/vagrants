@@ -18,7 +18,7 @@ if [ ${#} -eq 0 ]; then
    boxes="master ${pods}"
    CMD="vagrant up --parallel ${boxes}" \
       && inf "Running ${CMD}" && ${CMD} && pass "Just ran ${CMD}"
-   CMD="vagrant provision ${boxes} --provision-with=Sync" \
+   CMD="vagrant provision ${boxes} --provision-with=SyncAll" \
       && inf "Running ${CMD}" && ${CMD} && pass "Just ran ${CMD}"
    CMD="vagrant provision master --provision-with=SyncTest" \
       && inf "Running ${CMD}" && ${CMD} && pass "Just ran ${CMD}"
