@@ -175,7 +175,7 @@ $ADHOC = ""
 ### MASTER ###
 ###
    config.vm.define "#{MASTER}" do |subconfig|
-      PORT = 2300
+      PORT = 2350
       SOFTWARESTORE = "/vagrant/software"
 
 # $CREATE_CLUSTER
