@@ -2,7 +2,8 @@
 
 # k8s-cluster
 
-ln -fn ../k8s-cluster/Vagrantfile
+#rm -rf ./empty.sh master.sh node.sh controller.sh ./root_key.sh ./simple.sh ./sync.hosts.sh ./ubuntu.commands.sudo.sh ./ubuntu.k8s.sh ./vagrant_key.sh
+
 ln -fsn ../empty.sh ./empty.sh
 ln -fsn empty.sh master.sh
 ln -fsn empty.sh node.sh
@@ -23,7 +24,6 @@ for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} .
 dir=_shared_assets/techcraz && target=./${dir} && src=../${base}/${dir}
 if [ ! -d ${target} ]; then mkdir ${target}; fi
 for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} ./${target}/${f}; fi; done
-
 
 echo 0 > CTLR_CT
 echo 1 > MSTR_CT
