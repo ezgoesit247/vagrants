@@ -282,8 +282,8 @@ setup && go || fail "$(basename $0)"
 ' > /root/deploy_wp_mysql
 
 
-script_list+=("install_k8s_dashboard")
-echo -e "############ write install_k8s_dashboard - not working"
+script_list+=("dashboard_install")
+echo -e "############ write dashboard_install - not working"
 echo '#!/bin/bash
 ########################
 ###
@@ -292,10 +292,10 @@ echo '#!/bin/bash
 ########################
 kubectl apply -f ./yaml/kubernetes-dashboard.v2.0.5.yaml
 kubectl apply -f ./yaml/dashboard-service-np.yaml
-kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk \"{print \\$1}\")
 
 
-' > /root/install_k8s_dashboard
+' > /root/dashboard_install
 
 
 
@@ -308,7 +308,7 @@ echo '#!/bin/bash
 ### WRITES /joincluster FOR DOWNLOAD
 ###
 ### PARM1: apply | create
-### PARM2: YML - IF NOT LOCAL IE A URL THEN DOWNLOADS AND EXITS
+### PARM2: YML - IF NOT LOCAL eg A URL, THEN DOWNLOADS AND EXITS
 ###
 ########################
 CMD=${1}

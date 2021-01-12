@@ -10,3 +10,4 @@ vagrant_key.sh
 controller.sh
 Vagrantfile
 *yaml
+*txt
