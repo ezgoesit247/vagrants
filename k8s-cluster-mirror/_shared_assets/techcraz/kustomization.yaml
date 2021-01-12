@@ -1,8 +1,0 @@
-secretGenerator:
-- name: mysql-pwd
-  namespace: techcraz
-  literals:
-  - password=P@ssw0rd!
-resources:
-  - mysql-deployment.yaml
-  - wordpress-deployment.yaml
