@@ -1,13 +1,14 @@
 #!/bin/bash
+function blue { echo -n "$(tput setaf 6;tput setab 4)${*}$(tput sgr 0)"; }
 
-echo "this destroys, brings up, then does Sync"
 if [ ${#} -eq 0 ]; then
    p=`cat POD_CT` && m=`cat MSTR_CT` && i=0 && m=0 && pods= && master=
    while [ $i -lt ${p} ]; do
       i=`expr ${i} + 1` && pods="${pods} node${i}"
    done
    boxes="master ${pods}"
-   for i in 3 2 1; do echo -e "\trebuilding in $i: ${boxes} "; sleep 1; done
+   echo -n "Rebuilding env  " && blue "${PWD##*/}" && echo "  for ${boxes}"
+   for i in 3 2 1; do echo -e "\t\tin $i"; sleep 1; done
    CMD="vagrant destroy -f ${boxes}" && ${CMD}
    CMD="up" && time ${CMD}
 else
