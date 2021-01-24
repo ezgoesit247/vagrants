@@ -1,0 +1,19 @@
+#1
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml 
+kubectl create serviceaccount dashboard -n default
+kubectl create clusterrolebinding dashboard-admin -n default  --clusterrole=cluster-admin  --serviceaccount=default:dashboard
+
+kubectl delete clusterrolebinding dashboard-admin -n default
+kubectl delete serviceaccount dashboard -n default
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml 
+
+k delete ns kubernetes-dashboard
+
+kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
+
+
+#2
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml
+kubectl apply -f yaml/kubernetes-dashboard/dashboard-service-np.yaml
+kubectl apply -f yaml/kubernetes-dashboard/dashboard-service-np-mirror.yaml

@@ -2,10 +2,14 @@ ubuntu.commands.sudo.sh
 empty.sh
 master.sh
 node.sh
+rootkey.sh
+vagrantkey.sh
 root_key.sh
+vagrant_key.sh
 simple.sh
 sync.hosts.sh
 ubuntu.k8s.sh
-vagrant_key.sh
 controller.sh
 bash_history
+coredns/
+bash_history.sh

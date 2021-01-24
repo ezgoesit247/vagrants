@@ -1,2 +1,702 @@
 
 ### Login: Tue Jan 12 15:05:19 UTC 2021 ###
+
+### Login: Tue Jan 12 18:45:29 UTC 2021 ###
+ls
+./controlplane_and_join apply YAML_LOCAL
+./controlplane_and_join apply ${YAML_LOCAL}
+
+### Login: Tue Jan 12 18:58:20 UTC 2021 ###
+
+### Login: Wed Jan 13 21:05:51 UTC 2021 ###
+kinfoall
+
+### Login: Thu Jan 14 00:18:20 UTC 2021 ###
+
+### Login: Thu Jan 14 00:19:35 UTC 2021 ###
+./controlplane_and_join apply ${YAML_LOCAL}
+
+### Login: Thu Jan 14 02:48:46 UTC 2021 ###
+ls
+cat dashboard_install
+./dashboard_install
+ls
+k delete -f ./yaml/dashboard-service-np.yaml
+./dashboard_install
+k delete -f ./yaml/dashboard-service-np.yaml
+find . -name k8s-dashboard.v2.0.5.yaml
+./dashboard_install
+kdesc service kubernetes-dashboard -n kubernetes-dashboard
+kdesc pod kubernetes-dashboard -n kubernetes-dashboard
+
+### Login: Thu Jan 14 14:02:18 UTC 2021 ###
+
+### Login: Thu Jan 14 17:46:54 UTC 2021 ###
+ls
+./controlplane_and_join
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -d yes
+./wordpress_mysql_app_deploy -d
+./wordpress_mysql_app_deploy -t
+./wordpress_mysql_app_deploy -d
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -d
+./wordpress_mysql_app_deploy -dt
+./wordpress_mysql_app_deploy -t th
+./wordpress_mysql_app_deploy -n
+./wordpress_mysql_app_deploy
+
+### Login: Thu Jan 14 18:37:55 UTC 2021 ###
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -t
+./wordpress_mysql_app_deploy -t -n ns
+./wordpress_mysql_app_deploy -t -n
+kdesc service kubernetes-dashboard -n kubernetes-dashboard
+kdesc pod kubernetes-dashboard -n kubernetes-dashboard
+ls
+cat wordpress_mysql_app_deploy
+vi wordpress_mysql_app_deploy
+vi ~/.vimrc
+vi wordpress_mysql_app_deploy
+
+### Login: Thu Jan 14 18:50:01 UTC 2021 ###
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy  -t
+./wordpress_mysql_app_deploy  -d
+
+### Login: Thu Jan 14 18:53:16 UTC 2021 ###
+kinfoallw
+kinfoall
+kinfoall|grep schedu
+kinfoallw
+kdrain  k8s-mirror-node1 k8s-mirror-node2 k8s-mirror-node3 k8s-mirror-node4 k8s-mirror-node5 k8s-mirror-node6
+kdelete k8s-mirror-node1 k8s-mirror-node2 k8s-mirror-node3 k8s-mirror-node4 k8s-mirror-node5 k8s-mirror-node6
+ls
+vi wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -t
+vi wordpress_mysql_app_deploy
+ssh-nodes-reset
+kreset
+ls .kube/
+rm -rf .kube/
+vi wordpress_mysql_app_deploy
+kdesc service kubernetes-dashboard -n kubernetes-dashboard
+kdesc pod kubernetes-dashboard -n kubernetes-dashboard
+kdesc service kubernetes
+kdesc service wordpress
+kdesc pod wordpress
+kdesc pv mysql-pv-claim
+kdesc pod kube-scheduler
+kdesc pod kube-scheduler -n kube-system
+pods "hostname && ls -ld /var/www/html && ls -ld /var/www/html-tz && ls -ld /var/lib/mysql && ls -ld /var/lib/mysql-tz"
+./wordpress_mysql_app_deploy -u
+./wordpress_mysql_app_deploy
+vi /etc/kubernetes/scheduler.conf
+sudo vi /etc/kubernetes/scheduler.conf
+./wordpress_mysql_app_deploy -u
+./wordpress_mysql_app_deploy -n that
+./wordpress_mysql_app_deploy
+kubectl apply -k ./yaml/default/wp_mysql/
+
+### Login: Thu Jan 14 20:00:39 UTC 2021 ###
+
+### Login: Thu Jan 14 20:01:49 UTC 2021 ###
+./controlplane_and_join
+controlplane_and_join apply ${YAML_CALICO}
+./controlplane_and_join apply ${YAML_CALICO}
+diff ./calico.yaml ${YAML_CALICO_LOCAL}
+./controlplane_and_join apply ${YAML_CALICO_LOCAL}
+kubectl get nodes
+kget nodes
+kget pods
+kget pods -A
+ifconfig
+grep IP6_AUTODETECTION_METHOD ${YAML_CALICO_LOCAL}
+env|grep IP6_AUTODETECTION_METHOD
+export IP6_AUTODETECTION_METHOD=enp0s8
+./controlplane_and_join apply ${YAML_CALICO_LOCAL}
+cat controlplane_and_join
+
+### Login: Thu Jan 14 20:43:18 UTC 2021 ###
+ls
+kreset
+ssh-nodes-reset
+kinfoallw
+ssh-nodes-reset
+kreset
+kinfoallw
+
+### Login: Thu Jan 14 20:58:48 UTC 2021 ###
+
+### Login: Thu Jan 14 22:15:13 UTC 2021 ###
+ls
+./wordpress_mysql_app_deploy
+sudo vi /etc/bash.library
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -s
+sudo vi /etc/bash.library
+./wordpress_mysql_app_deploy -s
+./wordpress_mysql_app_deploy -u
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -t
+./wordpress_mysql_app_deploy -t -n tz
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -s
+./wordpress_mysql_app_deploy -u
+./wordpress_mysql_app_deploy -t
+./wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -s -n tz
+./wordpress_mysql_app_deploy -u -n tz
+./wordpress_mysql_app_deploy -s -n tz
+pods "hostname && ls -ld /var/www/html-tz && ls -ld /var/lib/mysql-tz"
+./wordpress_mysql_app_deploy -u -n tz
+pods "hostname && ls -ld /var/www/html-tz && ls -ld /var/lib/mysql-tz"
+pods "hostname && ls -ld /var/www/html-default && ls -ld /var/lib/mysql-default"
+./wordpress_mysql_app_deploy -s -n
+cat /etc/bash.library
+. /etc/bash.library
+echo ;
+echo '
+echo \'
+. /etc/bash.library
+error1 34345 prob
+
+### Login: Fri Jan 15 00:14:43 UTC 2021 ###
+
+### Login: Sat Jan 16 01:07:03 UTC 2021 ###
+
+### Login: Sat Jan 16 01:12:27 UTC 2021 ###
+
+### Login: Sat Jan 16 01:13:00 UTC 2021 ###
+
+### Login: Sat Jan 16 01:16:59 UTC 2021 ###
+./controlplane
+./controlplane  eefef
+./controlplane
+echo $YAML
+./controlplane
+echo $?
+./controlplane
+alias ssh="ssh ${PWD##*/}"
+cat dashboard_install
+pods "ls -d /var/www/"
+pods "sudo mkdir /var/www/"
+kdrain $(kubectl get nodes --no-headers|grep -v master|awk '{print $1}')
+kget nodes
+kdelete $(kubectl get nodes --no-headers|grep -v master|awk '{print $1}')
+kdrainall
+
+### Login: Sun Jan 17 21:21:03 UTC 2021 ###
+ls
+cat controlplane
+vi controlplane
+./controlplane
+vi controlplane
+vi .bashrc
+vi controlplane
+./controlplane
+vi controlplane
+./controlplane
+ls
+rm controlplane
+ls
+rm create_k8s_controlplane_sample create_k8s_cluster_sample
+ls
+./joinall
+./dashboard_install
+./dashboard_install -u
+alias ssh="ssh ${PWD##*/}"
+ls
+./dashboard_install
+./dashboard_install -u
+./dashboard_install
+./dashboard_install -u
+./wordpress_mysql_app_deploy -s
+./wordpress_mysql_app_deploy -st
+./wordpress_mysql_app_deploy
+kubectl get nodes
+kdrain k8s-mirror-node1 k8s-mirror-node2 k8s-mirror-node3
+kdelete k8s-mirror-node1 k8s-mirror-node2 k8s-mirror-node3
+node/k8s-mirror-node1
+k get nodes
+kreset
+ssh-nodes-reset
+sudo apt-get -qq update
+sudo apt-get install -qq          apt-transport-https          ca-certificates          gnupg-agent          software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - \
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+apt-key fingerprint 0EBFCD88
+dd-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+dd-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sdd-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudp apt-get -qq update
+sudo apt-get -qq update
+sudo apt-get install docker-ce=${DOCKER_VERSION}          docker-ce-cli=${DOCKER_VERSION}
+apt-cache docker-cw
+apt-cache docker-ce
+man apt-cache
+apt-cache searck docker-ce
+apt-cache search docker-ce
+apt-cache madison docker-ce
+apt-cache show 8.06.3~ce~3-0~ubuntu
+apt-cache show 18.06.3~ce~3-0~ubuntu
+apt-cache show 18.06.3
+apt-cache show docker-ce
+DOCKER_VERSION= "5:20.10.2~3-0~ubuntu-bionic"
+DOCKER_VERSION="5:20.10.2~3-0~ubuntu-bionic"
+sudo apt-get install docker-ce=${DOCKER_VERSION}          docker-ce-cli=${DOCKER_VERSION}
+systemctl kubelet status
+system status kubelet
+sudo systemctl status kubelet
+systemctl docker status
+systemctl status docker
+docker run hello-world
+sudo docker run hello-world
+docker ps
+sudo docker ps
+sudo docker ps -a
+ls
+./start_cluster
+kreset
+docker -version
+docker version
+apt-cache show docker-ce
+DOCKER_VERSION="5:19.03.14~3-0~ubuntu-bionic"
+sudo apt-get install docker-ce=${DOCKER_VERSION}          docker-ce-cli=${DOCKER_VERSION}
+docker version
+sudo docker version
+sudo apt-get remove docker-ce=${DOCKER_VERSION}          docker-ce-cli=${DOCKER_VERSION}
+DOCKER_VERSION="5:20.10.2~3-0~ubuntu-bionic"
+sudo apt-get -qq remove docker-ce=${DOCKER_VERSION}          docker-ce-cli=${DOCKER_VERSION}
+echo $DOCKER_VERSION
+DOCKER_VERSION="5:19.03.14~3-0~ubuntu-bionic"
+sudo docker version
+docker
+echo $DOCKER_VERSION
+sudo apt-get -qq install docker-ce=${DOCKER_VERSION}          docker-ce-cli=${DOCKER_VERSION}
+docker -version
+sudo docker version
+./start_cluster
+ls
+vi start_cluster
+/usr/local/bin/joinall-nodes
+k get nodes
+sudo cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo sed 's#Environment="KUBELET_KUBECONFIG_ARGS=-.*#Environment="KUBELET_KUBECONFIG_ARGS=--kubeconfig=/etc/kubernetes/kubelet.conf --require-kubeconfig=true --cgroup-driver=systemd"#g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+vi start_cluster
+sudo vi /etc/kubernetes/admin.conf
+sudo vi /etc/kubernetes/kubelet.conf
+sudo vi /etc/kubernetes/controller-manager.conf
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+docker info
+sudo docker info
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo vi /var/lib/kubelet/kubeadm-flags.env
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo systemctl restart kubelet
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+k get nodes
+k get nodes --no-header|grep -v master|awk '{print $1}'
+k get nodes --no-headers|grep -v master|awk '{print $1}'
+
+### Login: Sun Jan 17 21:22:47 UTC 2021 ###
+kdrainall
+grep kdrainall /etc/bash.bashrc
+
+### Login: Sun Jan 17 21:22:50 UTC 2021 ###
+kinfoallw
+
+### Login: Sun Jan 17 21:23:00 UTC 2021 ###
+ls
+joinall-nodes
+rm joinall
+ssh-nodes-reset
+ls
+which joinall
+cat /usr/local/bin/joinall
+cat /usr/local/bin/joinall-nodes
+joinall-nodes
+kdrainall
+kreset
+./start_cluster
+kreset
+sudo systemctl start kubelet
+sudo systemctl enable kubelet
+sudo systemctl start kubelet
+sudo systemctl status kubelet
+./start_cluster
+ssh-nodes-reset
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+kinfoallw
+
+### Login: Sun Jan 17 21:38:35 UTC 2021 ###
+
+### Login: Sun Jan 17 21:40:29 UTC 2021 ###
+
+### Login: Sun Jan 17 22:16:11 UTC 2021 ###
+whereis joinall-nodes
+cat /usr/local/bin/joinall-nodes
+
+### Login: Sun Jan 17 22:16:59 UTC 2021 ###
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo vi /etc/kubernetes/bootstrap-kubelet.conf
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+sudo systemctl status kubelet
+./start_cluster
+kinfoallw
+vi start_cluster
+kinfoallw
+vi start_cluster
+./start_cluster -j
+ls
+./start_cluster -j
+kinfoallw
+sudo vi /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+sudo systemctl daemon-reload
+kreset
+ssh-nodes-reset
+pods
+./start_cluster
+kinfoallw
+kinfoallw -n kubernetes-dashboard
+k get pod -n kubernetes-dashboard kubernetes-dashboard*
+k get pod -n kubernetes-dashboard
+k get pod -n kubernetes-dashboard kubernetes-dashboard-6f65cb5c64-4xhkd -o yaml
+kubectl apply -f    https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
+k get pod -n kubernetes-dashboard
+kinfoallw -n kubernetes-dashboard
+kubectl delete -f    https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
+kinfoallw -n kubernetes-dashboard
+kinfoallw
+kinfo
+kinfoall
+kdrainall
+grep kdrainall /etc/bash.bashrc
+kubectl get nodes --no-headers|grep -v master|awk "{print $1}"
+kubectl get nodes --no-headers|grep -v master|awk \"{print $1}\"
+kubectl get nodes --no-headers|grep -v master|awk "{print $1}"
+kubectl get nodes --no-headers|grep -v master|awk '{print $1}'
+grep kdrainall /etc/bash.bashrc
+sudo vi  /etc/bash.bashrc
+grep kdrainall /etc/bash.bashrc
+sudo vi  /etc/bash.bashrc
+grep kdrainall /etc/bash.bashrc
+sudo vi  /etc/bash.bashrc
+grep kdrainall /etc/bash.bashrc
+echo \'
+grep kdrainall /etc/bash.bashrc
+function kdrainall  { kdrain $(kubectl get nodes --no-headers|grep -v master|awk {print $1}) ; }
+kdrainall
+ubectl get nodes --no-headers|grep -v master
+kubectl get nodes --no-headers|grep -v master
+grep kdrainall /etc/bash.bashrc
+grep kdeleteall /etc/bash.bashrc
+grep kreset /etc/bash.bashrc
+ls /usr/local/bin
+echo $PATH
+rm /usr/local/bin/ssh-nodes-reset
+sudo rm /usr/local/bin/ssh-nodes-reset
+sudo rm /usr/local/bin/*
+ls /usr/local/bin
+resetnodes
+kdrainall
+grep kdrainall /etc/bash.bashrc
+kdrain $(kubectl get nodes --no-headers|grep -v master)
+kubectl get nodes --no-headers|grep -v master
+kubectl get nodes --no-headers|grep -v master|awk '{print $1}'
+kdrain $(kubectl get nodes --no-headers|grep -v master|awk '{print $1}')
+vi /etc/bash.bashrc
+kdrainall
+vi /etc/bash.bashrc
+sudo vi /etc/bash.bashrc
+kdrainall
+sudo vi /etc/bash.bashrc
+kubectl get nodes --no-headers|grep -v master|awk '{ print $1 }'
+kubectl get nodes --no-headers|grep -v master|awk '{ print $1 }' | xargs kdrain
+sudo vi /etc/bash.bashrc
+kubectl get nodes --no-headers|grep -v master|awk '{ print $1 }' | xargs kubectl drain --delete-emptydir-data --ignore-daemonsets
+kdrainall
+sudo vi /etc/bash.bashrc
+kdrainall
+sudo vi /etc/bash.bashrc
+function kdrainall  {  kubectl get nodes --no-headers|grep -v master|awk \'{print $1}\')|xargs kubectl drain --delete-emptydir-data --ignore-daemonsets ; }
+function kdrainall  {  kubectl get nodes --no-headers|grep -v master|awk '{print $1}')|xargs kubectl drain --delete-emptydir-data --ignore-daemonsets ; }
+
+### Login: Mon Jan 18 00:24:16 UTC 2021 ###
+kdrainall
+
+### Login: Mon Jan 18 00:25:53 UTC 2021 ###
+ls
+whereis joinall
+sudo rm /usr/local/bin/joinall
+sudo joinall-nodes
+vi ./start_cluster -j
+./start_cluster -j
+sudo su - -c "kubeadm token create --print-join-command > /joincluster"
+if [ -f /joincluster ]; then echo && echo $(hostname):/joincluster exists for pods to use; fi
+whereis joinall-nodes
+/usr/local/bin/joinall-nodes
+sudo joinall-nodes
+ssh node1
+sudo joinall-nodes
+./dashboard_install
+sudo joinall-nodes
+k show --help
+
+### Login: Mon Jan 18 18:27:59 UTC 2021 ###
+
+### Login: Mon Jan 18 18:28:36 UTC 2021 ###
+
+### Login: Mon Jan 18 18:29:28 UTC 2021 ###
+cat /usr/local/bin/joinall-nodes
+sudo vi /usr/local/bin/joinall-nodes
+vi /etc/bash.bashrc
+sudo vi /etc/bash.bashrc
+ls
+./start_cluster
+kreset
+vi start_cluster
+vi ./start_cluster
+K8S_VERSION=1.20.0-00
+sudo systemctl stop kubelet
+apt-get remove  kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+sudo apt-get remove  kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+ls /opt/cni/bin/
+ls /opt/cni/bin/calico
+ls /opt/cni/bin/calico/
+less /opt/cni/bin/calico
+rm -rf /opt/cni/bin/*
+sudo rm -rf /opt/cni/bin/*
+sudo apt-get -qq update
+K8S_VERSION="1.17.16"
+sudo apt-get install -qq          kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+cat /etc/apt/sources.list.d/kubernetes.list \
+cat /etc/apt/sources.list.d/kubernetes.list
+apt-cache madison kubelet
+K8S_VERSION="1.17.17-00
+K8S_VERSION="1.17.17-00"
+sudo apt-get install -qq          kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+sudo systemctl enable kubelet
+sudo systemctl start kubelet
+sudo systemctl status kubelet
+./start_cluster
+ls
+joinallnodes
+./wordpress_mysql_app_deploy -s
+ll /usr/local/bin/
+cat /usr/local/bin/podnodes
+./wordpress_mysql_app_deploy -s
+./wordpress_mysql_app_deploy -v
+vi wordpress_mysql_app_deploy
+./wordpress_mysql_app_deploy -s
+./wordpress_mysql_app_deploy
+vi env-var-test.sh
+. ./env-var-test.sh
+chmod 744 env-var-test.sh
+./env-var-test.sh
+ls
+./dashboard_install
+kdrainall
+kdeleteall
+kdelete
+k get node
+kdeleteall
+vi /etc/bash.bashrc
+kubectl get nodes --no-headers|grep -v master|awk '{print $1}')
+kubectl get nodes --no-headers|grep -v master|awk '{print $1}'
+kdelete k8s-mirror-node1
+vi /etc/bash.bashrc
+kdeleteall1
+vi /etc/bash.bashrc
+history|grep apt-cache
+apt-cache madison kubelet
+resetnodes
+./start_cluster
+export KUBECONFIG=/etc/kubernetes/admin.conf
+sudo kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+sudo kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+
+### Login: Mon Jan 18 21:56:00 UTC 2021 ###
+kdrainall
+kdelete
+kdeleteall
+kreset
+kinfoall
+env
+cat dashboard_install
+cat wordpress_mysql_app_deploy
+ls
+ls -1
+for f in `ls'; do if [ -x ${f} ] && [ -f ${f} ]; then echo ${f} && head -4 ${f}; fi; done;
+for f in `ls`; do if [ -x ${f} ] && [ -f ${f} ]; then echo ${f} && head -4 ${f}; fi; done;
+kinfoallw
+
+### Login: Mon Jan 18 22:33:09 UTC 2021 ###
+kinfoallw
+
+### Login: Mon Jan 18 22:45:09 UTC 2021 ###
+
+### Login: Mon Jan 18 22:52:10 UTC 2021 ###
+kinfoallw
+
+### Login: Tue Jan 19 01:05:39 UTC 2021 ###
+
+### Login: Tue Jan 19 01:07:26 UTC 2021 ###
+k create -f ./yaml/kubernetes-dashboard/dashboard-service-np.yaml
+k delete -f ./yaml/kubernetes-dashboard/dashboard-service-np.yaml
+k create -f ./yaml/kubernetes-dashboard/dashboard-service-np.yaml
+k delete -f ./yaml/kubernetes-dashboard/dashboard-service-np.yaml
+export KUBECONFIG=/home/vagrant/.kube/config
+export KUBECONFIG=${HOME}/.kube/config && _sessvars_[KUBECONFIG]={KUBECONFIG}
+echo 'export KUBECONFIG=${HOME}/.kube/config && _sessvars_[KUBECONFIG]={KUBECONFIG}' >> bash.bashrc
+echo 'export KUBECONFIG=${HOME}/.kube/config && _sessvars_[KUBECONFIG]={KUBECONFIG}' >> /etc/bash.bashrc
+sudo su - -c "echo 'export KUBECONFIG=${HOME}/.kube/config && _sessvars_[KUBECONFIG]={KUBECONFIG}' >> /etc/bash.bashrc"
+tail -1 /etc/bash.bashrc
+sudo vi /etc/bash.bashrc
+
+### Login: Tue Jan 19 01:14:38 UTC 2021 ###
+sudo vi /etc/bash.bashrc
+
+### Login: Tue Jan 19 01:15:05 UTC 2021 ###
+kinfoallw
+
+### Login: Tue Jan 19 01:15:11 UTC 2021 ###
+sudo vi /etc/bash.bashrc
+
+### Login: Tue Jan 19 01:15:44 UTC 2021 ###
+
+### Login: Tue Jan 19 01:15:50 UTC 2021 ###
+sudo kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+sudo kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yamlsudo kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+sudo kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+k delete app kubernetes-dashboard
+k delete app kubernetes-dashboard -n kubernetes-dashboard
+k delete deployment kubernetes-dashboard -n kubernetes-dashboard
+k delete deployment dashboard-metrics-scraper -n kubernetes-dashboard
+k delete svc dashboard-metrics-scraper -n kubernetes-dashboard
+k delete svc kubernetes-dashboard -n kubernetes-dashboard
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml 
+kubectl delete -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml 
+k create -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml 
+cat dashboard_install 
+kubectl create serviceaccount dashboard -n default
+k get serviceaccount -A
+kubectl create clusterrolebinding dashboard-admin -n default  --clusterrole=cluster-admin  --serviceaccount=default:dashboard
+k get endpoints
+k get endpoints -n kubernetes-dashboard
+k get nodeport 
+k get clusterrolebinding
+k get clusterrolebinding -n kubernetes-dashboard
+kubectl delete clusterrolebinding dashboard-admin -n default
+kubectl delete serviceaccount dashboard -n default
+kubectl create serviceaccount dashboard -n default
+kubectl create clusterrolebinding dashboard-admin -n default  --clusterrole=cluster-admin  --serviceaccount=default:dashboard
+kubectl create np
+kubectl create nodeport --help
+kubectl create svc --help
+kubectl create svc nodeport --help
+kubectl create svc nodeport --tcp=[8443:30003]
+kubectl create svc nodeport kubernetes-dashboard-service-np --tcp=[8443:30003]
+kubectl create svc nodeport kubernetes-dashboard-service-np --tcp=8443:30003
+kubectl delete svc kubernetes-dashboard-service-np
+k delete ns kubernetes-dashboard
+k drain --help
+
+### Login: Tue Jan 19 02:21:35 UTC 2021 ###
+kinfoallw
+kubectl delete clusterrolebinding dashboard-admin -n default  --clusterrole=cluster-admin  --serviceaccount=default:dashboard
+kinfoallw
+tail -f /var/log/syslog 
+sudo tail -f /var/log/syslog 
+kinfoallw
+
+### Login: Sat Jan 23 18:30:53 UTC 2021 ###
+
+### Login: Sat Jan 23 18:34:47 UTC 2021 ###
+
+### Login: Sat Jan 23 18:35:45 UTC 2021 ###
+joinall
+joinallnodes
+ls
+less start_cluster 
+vi start_cluster 
+./wordpress_mysql_app_deploy 
+./wordpress_mysql_app_deploy -s
+./wordpress_mysql_app_deploy 
+ls
+less ./dashboard_install 
+echo ${K_YAML_DASHBOARD}
+cat ./dashboard_install 
+kubectl apply -f ${K_YAML_DASHBOARD}
+kubectl delete -f ${K_YAML_DASHBOARD}
+kdrainall
+kdrainall0
+kdeleteall0
+kdeleteall
+resetnodes 
+kubectl apply -f ${K_YAML_DASHBOARD}
+
+### Login: Sat Jan 23 19:10:47 UTC 2021 ###
+kubectl delete -f ${K_YAML_DASHBOARD}
+cat dashboard_install 
+./dashboard_install 
+./dashboard_install -u
+venv|grep -i dash
+env|grep -i dash
+
+### Login: Sat Jan 23 19:30:17 UTC 2021 ###
+env|grep -i dash
+kreset
+ls
+kinfoallw
+
+### Login: Sat Jan 23 19:35:45 UTC 2021 ###
+
+### Login: Sat Jan 23 19:35:50 UTC 2021 ###
+kinfoallw
+./start_cluster 
+./wordpress_mysql_app_deploy -h
+./wordpress_mysql_app_deploy -u
+
+### Login: Sat Jan 23 20:49:10 UTC 2021 ###
+ls
+./start_cluster_default_calico 
+cat ./dashboard_install 
+
+### Login: Sat Jan 23 21:01:51 UTC 2021 ###
+vi start_cluster_default_calico 
+
+### Login: Sat Jan 23 23:39:50 UTC 2021 ###
+ls
+rm CLUSTER_SAMPLE_SCRIPT wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample 
+ls
+rm CLUSTER_SAMPLE_SCRIPT wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample 
+ls
+rm wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample 
+ls
+la
+ls
+vi start_cluster_default_calico 
+
+### Login: Sun Jan 24 00:07:49 UTC 2021 ###
+rm wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample 
+rm -rf wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample  && ls
+ls
+rm -rf wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample  && ls
+ls
+rm -rf wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample  && ls
+ls
+rm -rf wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample  && ls
+ls
+rm -rf wordpress_mysql_app_deploy dashboard_install start_cluster_default_calico podnetwork_calico cluster_sample  && ls
+ls

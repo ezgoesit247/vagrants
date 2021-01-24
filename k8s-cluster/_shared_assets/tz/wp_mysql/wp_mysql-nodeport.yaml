@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: wordpress-service-np-tz
+  namespace: tz
+  labels:
+    name: wordpress-tz
+spec:
+  type: NodePort
+  ports:
+  - port: 32466
+    nodePort: 30937
+    targetPort: 81
+    protocol: TCP
+    name: http
+  selector:
+    app: wordpress-tz

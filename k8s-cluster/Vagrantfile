@@ -16,25 +16,22 @@ MASTER = "master"
 NODE = "node"
 
 ROUTE="192.168.0.0"
-ROUTE_NETMASK = 16
-POD_NETWORK = "#{ROUTE}/#{ROUTE_NETMASK}"
+ROUTE_MASK = 16
+POD_NETWORK = "#{ROUTE}/#{ROUTE_MASK}"
 
-NODE_PREFIX="192.168.0"
-NODE_NETMASK = 16
-mstr_ip_pool = ["#{NODE_PREFIX}.20"]
+NODE_NETWORK="192.168"
+NODE_MASK = 16
+mstr_ip_pool = ["#{NODE_NETWORK}.0.20"]
 mstr_nm_pool = ["#{MASTER}"]
-ctlr_ip_pool = []#["#{NODE_PREFIX}.10"]
+ctlr_ip_pool = []#["#{NODE_NETWORK}.10"]
 ctlr_nm_pool = []#["#{CONTROLLER}"]
 pod_ip_pool = []
 pod_nm_pool = []
 
-K8S_VERSION = "1.20.0-00" #1.17.16
-DOCKER_VERSION = "5:19.03.14~3-0~ubuntu-bionic"
-
 IMAGE = "ubuntu/bionic64"
 PROVIDER = "virtualbox"
-ROOT_KEY_SCRIPT = "root_key.sh"
-VAGRANT_KEY_SCRIPT = "vagrant_key.sh"
+ROOT_KEY_SCRIPT = "rootkey.sh"
+VAGRANT_KEY_SCRIPT = "vagrantkey.sh"
 
 NODE_SCRIPT = "node#{TEST}.sh"
 MASTER_SCRIPT = "master#{TEST}.sh"
@@ -54,7 +51,7 @@ NAMELIST = ""
 FQDN = ""
 ETC_HOSTS = ""
 
-for i in 1..POD_CT  do; pod_ip_pool.append("#{NODE_PREFIX}.#{i+100}"); pod_nm_pool.append("#{NODE}#{i}"); end
+for i in 1..POD_CT  do; pod_ip_pool.append("#{NODE_NETWORK}.0.#{i+100}"); pod_nm_pool.append("#{NODE}#{i}"); end
 
 host_ip_pool = ctlr_ip_pool + mstr_ip_pool
 host_nm_pool = ctlr_nm_pool + mstr_nm_pool
@@ -79,50 +76,77 @@ for i in (0..CTLR_CT+MSTR_CT+POD_CT - 1) do
 end
 
 # WRITES:   /usr/local/bin/ssh-*
-$BIN_RUNSSH = "echo #{MSG} Running: \\$BIN_RUNSSH
+SSHPODNODES="podnodes"
+SSHALL="sshall"
+SSHMASTER="sshmaster"
+SSHRESETNODES="resetnodes"
+SSHJOINNODES="joinallnodes"
+JOINNODE="joinnode"
+$BIN_RUNSSH = <<EOF
+DIR="/usr/local/bin"
+script_list=()
 
-echo '#!/bin/bash
-### ssh-all ####
-if [ $# -gt 0 ]; then for ip in #{IPLIST}; do ssh ${ip} \"${1}\"; done;
-else echo \" Usage: Need argument to send\"; fi
-' > /usr/local/bin/ssh-all
-
-echo '#!/bin/bash
-### ssh-master ####
-if [ $# -gt 0 ]; then for ip in #{MASTERS}; do ssh ${ip} \"${1}\"; done;
-else echo \" Usage: Need argument to send\"; fi
-' > /usr/local/bin/ssh-master
-
-echo '#!/bin/bash
-### ssh-pods ####
-if [ $# -gt 0 ]; then for ip in #{PODS}; do ssh ${ip} \"${1}\"; done;
-else echo \" Usage: Need argument to send\"; fi
-' > /usr/local/bin/ssh-pods
-
-chmod 700 /usr/local/bin/ssh-all /usr/local/bin/ssh-master /usr/local/bin/ssh-pods
-chown vagrant:vagrant /usr/local/bin/ssh-all /usr/local/bin/ssh-master /usr/local/bin/ssh-pods
-"
-
-$BIN_RUNSSH1 = <<EOF
-
+FNAME="#{SSHPODNODES}"
+script_list+=("${FNAME}")
 echo -e "#!/bin/bash
-### ssh-pods-reset ####
-if [ \\$\# -eq 0 ]; then for ip in #{PODS}; do echo Resetting pod @ \\${ip} && echo && ssh \\${ip} \\"sudo su - -c 'kubeadm reset -f && rm -rf /joincluster'\\"; done
-else echo \\" Usage: Expect 0 args\\"; fi
-sudo rm -rf /joincluster
-" > /usr/local/bin/ssh-pods-reset
+### #{SSHPODNODES} ####
+if [ \\$\# -gt 0 ]; then for ip in #{PODS}; do ssh \\${ip} \\"\\${*}\\"; done;
+else echo -e \\" \\$(basename \\${0}) Usage: Need argument to send\\"; fi
+" > ${DIR}/${FNAME}
 
-chmod 700 /usr/local/bin/ssh-pods-reset
-chown vagrant:vagrant /usr/local/bin/ssh-pods-reset
-
+FNAME=#{SSHALL}
+script_list+=("${FNAME}")
 echo -e "#!/bin/bash
-### ssh-pods-join ####
-if [ \\$\# -eq 0 ]; then for ip in #{PODS}; do ssh \\${ip} \\"echo && hostname -f && ./join\\"; done
-else echo \\" Usage: Expect 0 args\\"; fi
-" > /usr/local/bin/ssh-pods-join
+### #{SSHALL} ####
+if [ \\$\# -gt 0 ]; then for ip in #{IPLIST}; do ssh \\${ip} \\"\\${*}\\"; done;
+else echo -e \\" \\$(basename \\${0}) Usage: Need argument to send\\"; fi
+" > ${DIR}/${FNAME}
 
-chmod 700 /usr/local/bin/ssh-pods-join
-chown vagrant:vagrant /usr/local/bin/ssh-pods-join
+FNAME=#{SSHMASTER}
+script_list+=("${FNAME}")
+echo -e "#!/bin/bash
+### #{SSHMASTER} ####
+if [ \\$\# -gt 0 ]; then for ip in #{MASTERS}; do ssh \\${ip} \\"\\${*}\\"; done;
+else echo -e \\" \\$(basename \\${0}) Usage: Need argument to send\\"; fi
+" > ${DIR}/${FNAME}
+
+FNAME=#{SSHRESETNODES}
+script_list+=("${FNAME}")
+echo -e "#!/bin/bash
+### #{SSHRESETNODES} ####
+if [ \\$\# -eq 0 ]; then for ip in #{PODS}; do echo Resetting node @ \\${ip} && echo && ssh \\${ip} \\"sudo su - -c 'kubeadm reset -f && rm -rf /joincluster'\\"; done
+else echo \\" Usage: Expect 0 args\\"; fi
+" > ${DIR}/${FNAME}
+
+FNAME=#{SSHJOINNODES}
+script_list+=("${FNAME}")
+echo -e "#!/bin/bash
+### #{SSHJOINNODES} ####
+if [ \\$\# -eq 0 ]; then for ip in #{PODS}; do ssh \\${ip} \\"echo && hostname -f && ./joincluster\\"; done
+else echo \\" Usage: Expect 0 args\\"; fi
+" > ${DIR}/${FNAME}
+
+FNAME=#{JOINNODE}
+script_list+=("${FNAME}")
+echo -e "#!/bin/bash
+### #{JOINNODE} ####
+if [ \\$\# -gt 0 ]; then for node in \\$\@; do ssh \\${node} \\"echo && hostname -f && ./joincluster\\"; done
+else echo \\" Usage: Expect node name arg(s)\\"; fi
+" > ${DIR}/${FNAME}
+
+
+################################################
+###
+### SET PERMISSIONS
+###
+################################################
+for script in ${script_list[@]}; do
+   chown vagrant:vagrant ${DIR}/${script}
+   chmod 700 ${DIR}/${script}
+done
+################################################
+
+
 EOF
 
 # APPENDS:  /etc/hosts
@@ -176,7 +200,7 @@ EOF
 
 $SYNCTEST_MASTER_ONLY = <<EOF
 echo #{MSG} Running: \\$SYNCTEST_MASTER_ONLY
-echo -e "#!/bin/bash\nssh-pods 's=\\\`hostname -f\\\` && echo -n \\"\`hostname\` to \\\${s} -> Success\\" && s=\\" and \\\`hostname\\\` back for -> Success\\" && ssh master \\"echo -n \\\\\\"\\\${s}\\\\\\" && hostname -f\\"'
+echo -e "#!/bin/bash\n#{SSHPODNODES} 's=\\\`hostname -f\\\` && echo -n \\"\`hostname\` to \\\${s} -> Success\\" && s=\\" and \\\`hostname\\\` back for -> Success\\" && ssh master \\"echo -n \\\\\\"\\\${s}\\\\\\" && hostname -f\\"'
 " > /root/test-node-connections \
    && chown vagrant:vagrant /root/test-node-connections \
    && chmod 744 /root/test-node-connections \
@@ -188,7 +212,7 @@ EOF
 $APPEND_ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$APPEND_ETC_BASHRC
 bashrc=/etc/bash.bashrc
-library=/etc/bash.library
+library=/etc/k.library
 
 echo '### START BASHRC' >> ${bashrc}
 x=`grep -n "### START BASHRC" ${bashrc} | head -1 | cut -f1 -d:` \
@@ -199,7 +223,8 @@ x=`grep -n "### START BASHRC" ${bashrc} | head -1 | cut -f1 -d:` \
 echo export HISTFILE=/vagrant/bash_history  >> ${bashrc}
 echo "echo -e \\"\\n### Login: \\`date\\` ###\\" >> \\${HISTFILE}"  >> ${bashrc}
 #{BASHRC} >> ${bashrc}
-#{LIBRARY} > ${library}
+#{BASHLIBRARY} > ${library}
+#{KLIBRARY} >> ${library}
 EOF
 
 $GENKEY = <<EOF
@@ -216,7 +241,7 @@ apt-get -qq update
 #{PYTHON}
 EOF
 
-$WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + $BIN_RUNSSH1 + <<-EOF
+$WRITE_SYNC = $ETC_INIT_SYNCHOSTS + $BIN_RUNSSH + <<-EOF
    date >> /etc/vagrant_provisioned_at
 EOF
 
@@ -235,115 +260,317 @@ $ADHOC = ""
       $CREATE_CLUSTER = <<-EOF
 script_list=()
 
-script_list+=("deploy_wp_mysql")
-echo -e "############ write deploy_wp_mysql ############"
-echo '#!/bin/bash
-source /etc/bash.library
-########################
-###
-### CREATES CONTROL PLANE WITH CALICO
-### JOINS NODE TO CLUSTER
-### CREATES & DEPLOYS APP IN NAMESPACE
-###
-########################
 
+WORDPRESS_MYSQL_APP_SCRIPT=wordpress_mysql_app_deploy
+script_list+=("${WORDPRESS_MYSQL_APP_SCRIPT}")
+echo -e "############ write ${WORDPRESS_MYSQL_APP_SCRIPT} ############"
+echo '#!/bin/bash
+source /etc/k.library
+########################
+###
+### CREATES & DEPLOYS wordpress_mysql IN NAMESPACE
+###
+###  -n namespace NAMESPACE ${NAMESPACE}
+###  -o nodeport APPORT ${APPORT}
+###  -u UNDEPLOY KUBECTL DELETE ${UNDEPLOY}
+###  -s SETUP & VERIFY ${SETUP}
+###  -v VERIFY ${VERIFY}
+###  -t TEST MODE ${TESTMODE}
+###  -h HELP MESSAGE
+###
+# pods "hostname && ls -ld /var/www/html-default && ls -ld /var/lib/mysql-default"
+# pods "hostname && ls -ld /var/www/html-tz && ls -ld /var/lib/mysql-tz"
+# pods "hostname && sudo rm -rf /var/www/html-default && sudo rm -rf /var/lib/mysql-default"
+# pods "hostname && sudo rm -rf /var/www/html-tz && sudo rm -rf /var/lib/mysql-tz"
+###
+############################ GLOBAL LIST #########
+APP=wp_mysql
+APPLOC=./yaml/${NAMESPACE}
+manifest=kustomization.yaml
+kubesystem="kube-system"
+thelist=()
+bin_dir=/usr/local/bin/
+
+######### TEST MODE SUPERCEEDS EVERYRHING ########
+function do_test {
+  echo "### TEST MODE ###"
+  #setup
+  #teardown
+
+  #if [ ${UNDEPLOY} -gt 0 ];
+  #  then un-go && pass do_test || fail do_test
+  #  else    go && pass do_test || fail do_test
+  #fi
+#  if [ ${APPORT} -gt 0 ]; then do_nodeport create; fi
+
+  #init && verify && check_podnetwork && check_manifest && pass "$(basename $0)" || fail "$(basename $0)"
+}
+##################################################
+###
+### LIST OF REMOTE DIRECTORY STRUCTURE
+###
+function init {
+  echo init
+  root="/"
+  thelist=()
+  thelist+=("${root}var/www")
+  thelist+=("${root}var/www/html-${NAMESPACE}")
+  thelist+=("${root}var/lib/mysql-${NAMESPACE}")
+  good2 "Directories" "${thelist[@]}"
+}
+##################################################
 function go {
-   ./controlplane apply yaml/calico_3.17.apiv1.yaml
-   ssh-pods-join
-   kubectl apply -f ./yaml/techcraz/namespace.techcraz.yaml
-   kubectl apply -k ./yaml/techcraz/
-
-#   kubectl apply -k ./yaml/
+  echo -e "Going for ${APP} @ namespace: ${NAMESPACE}\\n"
+  if [ ${APPORT} -gt 0 ]; then do_nodeport create
+    else if check_podnetwork; then deploy; fi
+  fi
 }
-function setup {
-   root=
-   thelist=()
-   thelist+=("${root}/var/www")
-   thelist+=("${root}/var/www/html")
-   thelist+=("${root}/var/www/html-tz")
-   thelist+=("${root}/var/lib/mysql")
-   thelist+=("${root}/var/lib/mysql-tz")
-   #echo ${thelist[@]}
-   for d in ${thelist[@]}; do ssh-pods "sudo mkdir ${d} 2> /dev/null"; done
+##################################################
+function un-go {
+  echo -e "Undeploying ${APP} @ namespace: ${NAMESPACE}\\n"
+  if check_podnetwork; then remove; fi
+  #do_nodeport delete
 }
-
+##################################################
+function deploy {
+  if check_manifest; then kubectl create -k ${APPLOC}/${APP}/; fi
+}
+##################################################
 function remove {
-   local CMD="sudo rm -rf /var/www/html 2> /dev/null;sudo rm -rf /var/www/html-tz 2> /dev/null;sudo rm -rf /var/lib/mysql 2> /dev/null;sudo rm -rf /var/lib/mysql-tz 2> /dev/null"
-   ssh-pods "$CMD"
-   ssh-pods "ls -d /var/www/html* ; ls -d /var/lib/mysql*"
+  if check_manifest; then kubectl delete -k ${APPLOC}/${APP}/; fi
 }
-function test_dirs {
-   ssh-pods "hostname && ls -d /var/www && ls -d /var/www/html* && ls -d /var/lib/mysql && echo || echo -e \\\"FAIL\\n\\\"" || return 1
+##################################################
+function check_podnetwork {
+  if kubectl get pods -n ${kubesystem}|grep calico >/dev/null; then return 0; fi
+  error "deploy pod network" "kubectl create -f ${K_YAML_CALICO}" && return 1;
+}
+##################################################
+function check_manifest {
+  if [ -f ${APPLOC}/${APP}/${manifest} ]; then return 0; fi
+  error "${manifest}" "not found in ${APPLOC}/${APP}/"; return 1
+}
+##################################################
+function getthelist {
+  alert2 "Directories" "${thelist[@]}"
+}
+##################################################
+function setup {
+  echo -e "Setting up ${APP} @ namespace: ${NAMESPACE}"
+  CMD="sudo mkdir"
+  if [ ${#thelist[@]} = 0 ]; then return 1; fi
+  for d in ${thelist[@]}; do setup="${setup}${CMD} ${d} 2> /dev/null;"; done
+    # echo "setup: ${setup}"
+  ${bin_dir}/#{SSHPODNODES} "${setup}"
+}
+##################################################
+function verify {
+  echo Verifying for namespace: ${NAMESPACE}
+  CMD="sudo mkdir"
+  for d in ${thelist[@]}; do setup="${setup}${CMD} ${d} 2> /dev/null;"; done
+  RC=0 && for d in ${thelist[@]}; do verify="${verify}if ! ls ${d} >/dev/null 2>&1; then echo -n FAILED@ && echo \\\$(hostname -f) && exit 1; fi;"; done
+    # echo "verify: ${verify}"
+  if ! ${bin_dir}/#{SSHPODNODES}  "${verify}"; then RC=99; fi;
+  return ${RC}
+}
+##################################################
+function teardown {
+  alert2 "Removing" "${thelist[@]}"
+  CMD="sudo rm -rf"
+  if [ ${#thelist[@]} = 0 ]; then return 0; fi
+  for d in ${thelist[@]}; do teardown="${teardown}${CMD} ${d};"; done
+    # echo "teardown: ${teardown}"
+  ${bin_dir}/#{SSHPODNODES}  "${teardown}";
+}
+##################################################
+function do_nodeport {
+if [ ${APPORT} -gt 0 ]; then
+cat <<STP | kubectl ${1} -f -
+kind: Service
+apiVersion: v1
+metadata:
+  name: wordpress-service-np-${NAMESPACE}
+  namespace: ${NAMESPACE}
+  labels:
+    name: wordpress
+spec:
+  type: NodePort
+  ports:
+  - port: ${APPORT}
+    nodePort: 30937
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: wordpress
+STP
+fi
+
+}
+##### END OF APPORT #####
+
+##########   ***** MAIN *****   ##################
+################## INIT ##########################
+init
+################## TEST ##########################
+if [ ${TESTMODE} -gt 0 ]; then
+  do_test
+else
+################## VERIFY ########################
+  if [ ${VERIFY} -gt 0 ]
+    then verify && pass "$(basename $0)" || fail2 "$(basename $0):" "run setup with -s" && exit 2
+  else
+################## DELETE ########################
+    if [ ${UNDEPLOY} -gt 0 ]
+      then un-go
+    else
+################## SETUP #########################
+      if [ ${SETUP} -gt 0 ]
+        then setup && verify && pass "$(basename $0)"
+      else
+################### GO ###########################
+        verify && pass "$(basename $0)" && go || fail2 "$(basename $0):" "run setup first with -s?" && exit 3
+##################################################
+fi;fi;fi;fi;
+
+##################################################
+# END
+##################################################
+##################################################
+##################################################
+' > /root/${WORDPRESS_MYSQL_APP_SCRIPT}
+
+
+
+
+K8S_DASHBOARD_SCRIPT=dashboard_install
+script_list+=("${K8S_DASHBOARD_SCRIPT}")
+echo -e "############ write ${K8S_DASHBOARD_SCRIPT}"
+echo '#!/bin/bash
+source /etc/k.library
+########################
+###
+###  -u UNDEPLOY KUBECTL DELETE
+###
+########################
+function deploy {
+  if [ -n "${K_YAML_DASHBOARD}" ]; then
+    kubectl create -f ${K_YAML_DASHBOARD}
+    kubectl create -f ./yaml/kubernetes-dashboard/dashboard-service-np.yaml
+    kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk \"{print \\$1}\")
+  else
+    echo env K_YAML_DASHBOARD not set
+  fi
+}
+function un-go {
+  kubectl delete -f ./yaml/kubernetes-dashboard/dashboard-service-np.yaml
+  kubectl delete -f ${K_YAML_DASHBOARD}
+}
+function gettoken {
+  kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk \"{print \\$1}\") | grep token
 }
 
-setup && go || fail "$(basename $0)"
+################## GO ############################
+if [ ${UNDEPLOY} -gt 0 ];
+  then un-go;
+  else if [ ${TOKEN} -gt 0 ]; then gettoken;
+    else deploy;
+  fi
+fi
+################################################
+# END
+################################################
+' > /root/${K8S_DASHBOARD_SCRIPT}
 
 
-' > /root/deploy_wp_mysql
 
 
-script_list+=("dashboard_install")
-echo -e "############ write dashboard_install - not working"
+
+START_CLUSTER_SCRIPT=start_cluster_default_calico
+script_list+=("${START_CLUSTER_SCRIPT}")
+echo -e "############ write ${START_CLUSTER_SCRIPT} ############"
 echo '#!/bin/bash
+source /etc/k.library
 ########################
 ###
-### ?????
+### INITS A CONTROL PLANE
+### CREATES A POD NETWORK
+### WRITES JOIN FILES TO USE
+###
+### PARM1: YML - IF NOT LOCAL eg A URL, THEN DOWNLOADS
+###         IF PARM1 IS EMPTY THEN USES DEFAULT
 ###
 ########################
-kubectl apply -f ./yaml/kubernetes-dashboard.v2.0.5.yaml
-kubectl apply -f ./yaml/dashboard-service-np.yaml
-kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk \"{print \\$1}\")
-
-
-' > /root/dashboard_install
-
-
-
-script_list+=("controlplane")
-echo -e "############ write controlplane ############"
-echo '#!/bin/bash
-########################
-###
-### CREATES CONTROL PLANE
-### WRITES /joincluster FOR DOWNLOAD
-###
-### PARM1: apply | create
-### PARM2: YML - IF NOT LOCAL eg A URL, THEN DOWNLOADS AND EXITS
-###
-########################
-CMD=${1}
-YAML=${2}
+YAML=${1}
 K_APISERVER="#{mstr_ip_pool[0]}"
 K_PODNETWORK="#{POD_NETWORK}"
 
-echo && echo -e "\\$K_APISERVER\\t${K_APISERVER}\\n\\$K_PODNETWORK\\t${K_PODNETWORK}\\n\\$YAML\\t${YAML}"
-if [ -z ${CMD} ];then echo -e "\\tUsage: $(basename \$0) [CMD] [rm YAML]\\n\\tdid you pass create or apply?" && exit 1; fi
-if [ ! -f ${YAML} ]; then echo Need local YAML getting.....;
-   curl -s ${YAML} -O && if [ -f ./$(basename ${YAML}) ]; then echo Just got ./$(basename ${YAML}); fi
-exit 2; fi
-echo using local ${YAML}
+function init_control_plane {
+  if [ -z ${YAML} ]; then default_calico; fi
+  sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} --pod-network-cidr=${K_PODNETWORK}"
+  rm -rf ~vagrant/.kube && mkdir /home/vagrant/.kube 2>/dev/null
+  sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config"
+  sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube"
+}
+function default_calico {
+  YAML="/home/vagrant/yaml/calico_3.17.apiv1.yaml"
+}
 
-sudo su - -c "kubeadm init --apiserver-advertise-address=${K_APISERVER} --pod-network-cidr=${K_PODNETWORK}"
-rm -rf ~vagrant/.kube && mkdir /home/vagrant/.kube 2>/dev/null
-sudo su -c "cp /etc/kubernetes/admin.conf /home/vagrant/.kube/config"
-sudo su -c "chown -R vagrant:vagrant /home/vagrant/.kube"
+function create_pod_network {
+  if [ ! -f ${YAML} ]; then error "no local YAML" "${YAML}" && exit 1; fi
+  sudo su - vagrant -c "kubectl create -f ${YAML}"
+}
 
-echo && systemctl status kubelet|grep Active
+function get_yaml {
+  if [ ! -f ${YAML} ]; then echo Need local YAML getting.....;
+    curl -s ${YAML} -O && YAML=./$(basename ${YAML})
+    if [ -f ${YAML} ]; then echo Just got ${YAML}; fi
+  fi
+}
 
-sudo su - vagrant -c "kubectl ${CMD} -f ${YAML}"
-#if ! sudo su - vagrant -c "kubectl ${CMD} -f ${YAML}" 2> /dev/null; then ;fi
+function create_token {
+  sudo su - -c "kubeadm token create --print-join-command > /joincluster"
+  if [ -f /joincluster ]; then echo wrote $(hostname):/joincluster; fi
+}
+function wrapup {
+  #echo && echo -e "\\$K_APISERVER\\t${K_APISERVER}\\n\\$K_PODNETWORK\\t${K_PODNETWORK}\\n\\$YAML\\t${YAML}"
+  alert2 "Install Kubernetes Dashboard" "./'${K8S_DASHBOARD_SCRIPT}'"
+  alert2 "Join Nodes" "/usr/local/bin/#{SSHJOINNODES}"
+}
 
-sudo su - -c "kubeadm token create --print-join-command > /joincluster"
-if [ -f /joincluster ]; then echo && echo /joincluster exists for pods to use; fi
+################## GO ############################
+if [ ${JOIN} -gt 0 ]
+  then create_token && wrapup
+else
+  init_control_plane
+  create_pod_network && create_token && wrapup
+fi
+##################################################
 
-' > /root/controlplane
+################################################
+# END
+################################################
+' > /root/${START_CLUSTER_SCRIPT}
+
+
+
+CREATE_CALICO_SCRIPT=podnetwork_calico
+script_list+=("${CREATE_CALICO_SCRIPT}")
+echo -e "############ write ${CREATE_CALICO_SCRIPT} ############"
+echo '#!/bin/bash
+source /etc/k.library
+kubectl create -f ${K_YAML_CALICO}
+################################################
+# END
+################################################
+' > /root/${CREATE_CALICO_SCRIPT}
 
 
 
 
 
-script_list+=("create_k8s_controlplane_sample")
-echo -e "############ write create_k8s_controlplane_sample ############"
+CLUSTER_SAMPLE_SCRIPT=cluster_sample
+script_list+=("${CLUSTER_SAMPLE_SCRIPT}")
+echo -e "############ write ${CLUSTER_SAMPLE_SCRIPT} ############"
 echo '#!/bin/bash
 ########################
 ###
@@ -374,29 +601,28 @@ sudo su - vagrant -c "kubectl create -f ${YAML}" 2>&1 | tee -a ${LOG}
 echo "kubeadm token create:" >> ${LOG}
 sudo su - -c "kubeadm token create --print-join-command > /joincluster" 2>&1 | tee -a ${LOG}
 
-if [ -f /joincluster ]; then echo /joincluster exists for pods to use; fi
+if [ -f /joincluster ]; then echo wrote /joincluster; fi
+################################################
+# END
+################################################
+' > /root/${CLUSTER_SAMPLE_SCRIPT}
 
-' > /root/create_k8s_controlplane_sample
 
 
+
+
+
+################################################
+###
+### SET PERMISSIONS FOR SCRIPTS IN script_list
+###
+################################################
 for script in ${script_list[@]}; do
    chown vagrant:vagrant /root/${script}
    chmod 744 /root/${script}
    ln -fn /root/${script} /home/vagrant/${script}
 done
-
-
-
-echo '#!/bin/bash
-while getopts c: option
-do
-case \"${option}\"
-in
-c) CP=${OPTARG};;
-esac
-done
-' > /root/library
-#script_list+=("library")
+################################################
 
 EOF
 ####################################################
@@ -407,8 +633,11 @@ EOF
 ### MASTER ###
 ###
    config.vm.define "#{MASTER}" do |subconfig|
-MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
-      PORT = 2300 + MIRROR_PORT_ADD
+    MIRROR_SSH_PORT_ADD = 0; MIRROR__FORWARD_PORT_ADD=0;
+    if PURPOSE.include? "mirror";
+      MIRROR_SSH_PORT_ADD += 10000; MIRROR__FORWARD_PORT_ADD=1;
+    end
+      PORT = 2300 + MIRROR_SSH_PORT_ADD
       $NTP = $ETC_INITD_NTPSYNC + <<-EOF
 #{NTP}
       EOF
@@ -416,20 +645,21 @@ MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
 /bin/bash /etc/init/synchosts.sh
       EOF
       subconfig.vm.provision "SyncTest", type: "shell", run: "never", name: "SyncTest", inline: $SYNCTEST_MASTER_ONLY
-###
-### MASTER ###
-###
       subconfig.vm.provision "First", type: "shell", run: "once", name: "First", inline: $WRITE_HOSTS_APTUPDATE_PYTHON
       subconfig.vm.provision "GenKey", type: "shell", run: "once", name: "GenKey", inline: $GENKEY
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
       subconfig.vm.provision "init", type: "shell", run: "once", name: "init", path: "#{MASTER_SCRIPT}"
       subconfig.vm.provision "Software", type: "shell", run: "once", name: "Software", inline: <<-EOF
-apt-get -qq install unzip
+apt-get -qq install unzip nmap jq
+#{NTP}
 #{CONTAINERD}
 #{CONTAINER_CONFIG}
 #{K8S}
       EOF
+###
+### MASTER ###
+###
       subconfig.vm.provision "bashrc", type: "shell", run: "once", name: "bashrc", inline: $APPEND_ETC_BASHRC
       subconfig.vm.provision "Cluster", type: "shell", run: "once", name: "Cluster", inline: $CREATE_CLUSTER
       subconfig.vm.provision "Last", type: "shell", run: "once", name: "Last", inline: $WRITE_SYNC
@@ -446,23 +676,25 @@ for u in `ls -C /home`;do
    echo 'alias ls="ls -Ahltr --color=auto"' >> ${bashrc}
    echo 'export PS1="\\[\\e]0;\\u@\\h: \\w\\a\\]${debian_chroot:+($debian_chroot)}\\[\\033[1;34m\\]\\u\\[\\033[0m\\]@\\[\\033[1;31m\\]\\h:\\[\\033[0;37m\\]\\w\\[\\033[0m\\]\\$ "' >> ${bashrc}
    ln -fsn /vagrant/_shared_assets/ /home/${u}/yaml
+   echo set nu > /home/${u}/.vimrc
 done
 echo 'alias ls="ls -Ahltr --color=auto"' >> /root/.bashrc
 echo 'export PS1="\\[\\e]0;\\u@\\h: \\w\\a\\]${debian_chroot:+($debian_chroot)}\\[\\033[1;32m\\]\\u\\[\\033[0m\\]@\\[\\033[1;31m\\]\\h:\\[\\033[0;37m\\]\\w\\[\\033[0m\\]\\$ "' >> /root/.bashrc
 
 date >> /etc/vagrant_provisioned_at
          EOF
+      #if ! PURPOSE.include? "mirror" # ! NOT MIRROR !
+         subconfig.vm.network "forwarded_port", guest: 8001, host: 8001 + MIRROR__FORWARD_PORT_ADD
+         subconfig.vm.network "forwarded_port", guest: 30937, host: 30937 + MIRROR__FORWARD_PORT_ADD
+         subconfig.vm.network "forwarded_port", guest: 32370, host: 32370 + MIRROR__FORWARD_PORT_ADD
+         subconfig.vm.network "forwarded_port", guest: 31162, host: 31162 + MIRROR__FORWARD_PORT_ADD
+         subconfig.vm.network "forwarded_port", guest: 30002, host: 30002 + MIRROR__FORWARD_PORT_ADD
+      #end
 ###
-### MASTER ###
+### MASTER ### PORTS
 ###
-      if ! PURPOSE.include? "mirror" # ! NOT MIRROR !
-         subconfig.vm.network "forwarded_port", guest: 8001, host: 8001
-         subconfig.vm.network "forwarded_port", guest: 30937, host: 30937
-         subconfig.vm.network "forwarded_port", guest: 32370, host: 32370
-         subconfig.vm.network "forwarded_port", guest: 30002, host: 30002
-      end
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
-      subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
+      subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_MASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
 
       subconfig.vm.box = "#{IMAGE}"
@@ -476,7 +708,17 @@ date >> /etc/vagrant_provisioned_at
       end
       subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: $APPEND_ETC_BASHRC + <<-EOF
             #{NOTHING}
-            EOF
+kubeadm reset -f
+K8S_VERSION=#{K8S_VERSION_20}
+systemctl stop kubelet
+apt-get remove -qq kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+rm -rf /opt/cni/bin/*
+apt-get -qq update
+K8S_VERSION=#{K8S_VERSION_19}
+apt-get install -qq          kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+systemctl enable kubelet
+systemctl start kubelet
+      EOF
    end
 ### END MASTER ###
 
@@ -493,11 +735,11 @@ date >> /etc/vagrant_provisioned_at
          $JOIN = <<-EOF
 echo '#!/bin/bash
 sudo su - -c "scp -o StrictHostKeyChecking=no \'#{MASTER}.#{HOSTNAME_SUFFIX}\':/joincluster /joincluster"
-sudo su - -c "/bin/bash /joincluster"' > /root/join_k8s_cluster.sh
+sudo su - -c "/bin/bash /joincluster"' > /root/joincluster
 
-chown vagrant:vagrant /root/join_k8s_cluster.sh
-ln -fn /root/join_k8s_cluster.sh /home/vagrant/join
-chmod 744 /home/vagrant/join
+chown vagrant:vagrant /root/joincluster
+ln -fn /root/joincluster /home/vagrant/joincluster
+chmod 744 /home/vagrant/joincluster
 
 EOF
 ###
@@ -505,8 +747,8 @@ EOF
 ###
    (1..POD_CT).each do |i|
       config.vm.define "#{NODE}#{i}" do |subconfig|
-MIRROR_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_PORT_ADD += 1000; end
-      PORT = 2300 + i + MIRROR_PORT_ADD
+MIRROR_SSH_PORT_ADD = 0; if PURPOSE.include? "mirror"; MIRROR_SSH_PORT_ADD += 10000; end
+      PORT = 2300 + i + MIRROR_SSH_PORT_ADD
          subconfig.vm.provision "SyncAll", type: "shell", run: "never", name: "SyncAll", inline: $ETC_HOSTS + $WRITE_SYNC + <<-EOF
 /bin/bash /etc/init/synchosts.sh
       EOF
@@ -530,14 +772,25 @@ for u in `ls -C /home`;do
 done
       EOF
       subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: <<-EOF
-mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
+          #{NOTHING}
+kubeadm reset -f
+K8S_VERSION=#{K8S_VERSION_20}
+systemctl stop kubelet
+apt-get remove -qq kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+rm -rf /opt/cni/bin/*
+apt-get -qq update
+K8S_VERSION=#{K8S_VERSION_19}
+apt-get install -qq          kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
+systemctl enable kubelet
+systemctl start kubelet
+
       EOF
 ###
 ### PODS
 ###
          ip_ndx = i - 1
          subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
-         subconfig.vm.network "private_network", ip: pod_ip_pool[ip_ndx], netmask: NODE_NETMASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
+         subconfig.vm.network "private_network", ip: pod_ip_pool[ip_ndx], netmask: NODE_MASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
 
          subconfig.vm.box = "#{IMAGE}"
          subconfig.vm.hostname = "#{PURPOSE}-#{NODE}#{i}.#{LIFECYCLE}.#{DOMAIN}"
@@ -564,19 +817,36 @@ mv /home/vagrant/join_k8s_cluster.sh /home/vagrant/join
       end
       subconfig.vm.provision "RootKey", type: "shell", run: "once", name: "RootKey", path: "#{ROOT_KEY_SCRIPT}"
       subconfig.vm.provision "VagrantKey", type: "shell", run: "once", name: "VagrantKey", path: "#{VAGRANT_KEY_SCRIPT}"
+      subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: <<-EOF
+          #{NOTHING}
+      EOF
    end
    end
-#### SEND SANDBOXES #####
+#### END SANDBOXES #####
 
 end
 ###
 ### END Vagrant.configure ###
 ###
 
-MSG = "%%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% *****"
+MSG = "***** %%%%% ***** %%%%% ********** %%%%% ***** %%%%% *****"
    def msg(message)
       return "#{MSG} #{message}"
    end
+
+###
+### SOFTWARE ###
+###
+
+K8S_VERSION_20="1.20.2-00"
+K8S_VERSION_19="1.19.7-00"
+K8S_VERSION_18="1.18.15-00"
+K8S_VERSION_17="1.17.17-00"
+DOCKER_VERSION_5_20="5:20.10.2~3-0~ubuntu-bionic"
+DOCKER_VERSION_5_19="5:19.03.14~3-0~ubuntu-bionic"
+
+K8S_VERSION=K8S_VERSION_20
+DOCKER_VERSION=DOCKER_VERSION_5_20
 
 NTP = 'echo ' + msg("Installing NTP")+'
    apt-get -y -qq install ntp ntpdate ntpstat \
@@ -615,10 +885,9 @@ DOCKER = 'DOCKER_VERSION="' + "#{DOCKER_VERSION}" + '" && echo ' + msg("Installi
       && apt-key fingerprint 0EBFCD88 \
       && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
       && apt-get -qq update \
-      && apt-get install -qq \
+      && apt-get -qq install\
          docker-ce=${DOCKER_VERSION} \
-         docker-ce-cli=${DOCKER_VERSION} \
-         containerd.io'
+         docker-ce-cli=${DOCKER_VERSION}'
 
 CONTAINERD = 'echo ' + msg("Installing CONTAINERD")+'
 apt-get -qq update
@@ -646,14 +915,14 @@ net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 
-   sudo modprobe overlay
-   sudo modprobe br_netfilter
+sudo modprobe overlay
+sudo modprobe br_netfilter
 
-   sudo sed -i "/swap/d" /etc/fstab && sudo swapoff -a
-   sudo sysctl --system
-   sudo mkdir -p /etc/containerd
-   sudo containerd config default | sudo tee /etc/containerd/config.toml
-   sudo systemctl restart containerd
+sudo sed -i "/swap/d" /etc/fstab && sudo swapoff -a
+sudo sysctl --system
+sudo mkdir -p /etc/containerd
+sudo containerd config default | sudo tee /etc/containerd/config.toml
+sudo systemctl restart containerd
 '
 
 CONTAINER_CONFIG1 ='
@@ -688,18 +957,30 @@ curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bas
    && cd -
 '
 
-LIBRARY = "echo '
-function color  { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
-function green  { color 4 2 \"${*}\"; }
-function yellow { color 0 3 \"${*}\"; }
-function red    { color 0 1 \"${*}\"; }
-function blue   { color 6 4 \"${*}\"; }
-function cyan   { color 4 6 \"${*}\"; }
-function grey   { color 0 7 \"${*}\"; }
-function pass   { echo \"$(green PASS: ${*})\"; echo; }
-function warn   { echo \"$(yellow PASS: ${*})\"; echo; }
-function fail   { echo \"$(red FAIL: ${*})\"; echo; }
-function info   { echo \"$(grey INFO: ${*})\"; echo; }
+# bash.library
+BASHLIBRARY = "echo '
+function color   { echo -n \"\$(tput setaf $1;tput setab $2)${3}$(tput sgr 0) \"; }
+function green   { color 4 2 \"${*}\"; }
+function yellow  { color 0 3 \"${*}\"; }
+function red     { color 0 1 \"${*}\"; }
+function blue    { color 6 4 \"${*}\"; }
+function cyan    { color 4 6 \"${*}\"; }
+function grey    { color 0 7 \"${*}\"; }
+function pass    { echo \"$(green PASS: ${*})\"; echo; }
+function pass2   { echo -n \"$(green PASS: ${1})\"; echo ${*:2}; }
+function warn    { echo \"$(yellow PASS: ${*})\"; echo; }
+function warn2   { echo -n \"$(yellow PASS: ${1})\"; echo ${*:2}; }
+function fail    { echo \"$(red FAIL: ${*})\"; echo; }
+function fail2   { echo -n \"$(red FAIL: ${1})\"; echo ${*:2}; }
+function info    { echo \"$(grey INFO: ${*})\"; echo; }
+function info2   { echo -n \"$(red INFO: ${1})\"; echo ${*:2}; }
+function println { printf \"$1\n\" \"${@:2}\"; }
+function error   { println '" + '\\\'' + "'\t\e[31mError (%s): \e[m%s'" + '\\\'' + "' \"$1\" \"${*:2}\"; }
+function error2  { println '" + '\\\'' + "'\t\e[31mError (%d): \e[m%s'" + '\\\'' + "' \"$1\" \"${*:2}\"; }
+function good    { println '" + '\\\'' + "'\t\e[32m%s\e[m'" + '\\\'' + "' \"$*\"; }
+function good2   { println '" + '\\\'' + "'\t\e[32m(%s) \e[m%s'" + '\\\'' + "' \"$1\" \"${*:2}\"; }
+function alert   { println '" + '\\\'' + "'\t\e[33m%s\e[m'" + '\\\'' + "' \"$*\"; }
+function alert2  { println '" + '\\\'' + "'\t\e[33m(%s) \e[m%s'" + '\\\'' + "' \"$1\" \"${*:2}\"; }
 function showalias { echo ${BASH_ALIASES[*]}; }
 function getservices { systemctl list-units --type=service; }
 function getactive { systemctl list-units --type=service --state=active; }
@@ -709,10 +990,78 @@ function getrunning { systemctl list-units --type=service --state=running; }
 function verify {
    if [ -f ${1} ]; then echo ${1} exists
    else echo fail; return 1; fi
-}'"
+}
+'"
 
+# k.library
+KLIBRARY = "echo '
+function usage {
+   _usage_ ${*}
+}
+
+_optlist_=()
+_optlist_+=(\"n<namespace>\")
+_optlist_+=(\"o<nodeport>\")
+_optlist_+=(\"u\")
+_optlist_+=(\"t\")
+_optlist_+=(\"v\")
+_optlist_+=(\"s\")
+_optlist_+=(\"j\")
+_optlist_+=(\"k\")
+options_msg=\"options: \"
+for o in ${_optlist_[@]}; do
+  options_msg=\"${options_msg}${o}|\"
+done
+usage_msg=\"$(basename $0) [${options_msg}h]\"
+function _usage_ {
+  error usage ${usage_msg}
+  echo -e \"${*}\"
+}
+function _help_ {
+  alert ${usage_msg}
+  println '" + '\\\'' + "'\t\e[33m-n namespace: NAMESPACE\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-o port: APPORT\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-u: UNDEPLOY\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-t: TEST\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-v: VERIFY\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-s: SETUP\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-j: JOIN\e[m'" + '\\\'' + "' \"$*\";
+  println '" + '\\\'' + "'\t\e[33m-k: TOKEN\e[m'" + '\\\'' + "' \"$*\";
+}
+
+TESTMODE=0
+SETUP=0
+UNDEPLOY=0
+NAMESPACE=default
+APPORT=0
+VERIFY=0
+JOIN=0
+TOKEN=0
+
+_opts_=\"n:o:stuvjhk\"
+while getopts ${_opts_} _option_
+do
+case \"${_option_}\"
+in
+n) NAMESPACE=${OPTARG};;
+o) APPORT=${OPTARG};;
+u) UNDEPLOY=1;;
+t) TESTMODE=1;;
+v) VERIFY=1;;
+s) SETUP=1;;
+j) JOIN=1;;
+k) TOKEN=1;;
+H1) _help_ \"NO ARGS\" && exit 0;;
+H0) usage \"NO ARGS\" \": go\\n-n namespace: NAMESPACE\\n-o port: APPORT\\n-u: UNDEPLOY\\n-t: TEST\\n-s: SETUP\\n-v: VERIFY\\n-j: JOIN\\n-k: TOKEN\" && exit 0;;
+h) _help_ && exit 0;;
+*) usage && exit 1;;
+esac
+done
+'"
+
+LIBRARY=BASHLIBRARY+KLIBRARY
 BASHRC = "echo '### START BASHRC
-source /etc/bash.library
+source /etc/k.library
 
 
 alias watch=\"watch \"
@@ -727,7 +1076,7 @@ alias kinfow=\"watch kubectl get all --output=wide\"
 alias kcluster=\"kubectl cluster-info\"
 
 alias   kgetpod=\"kubectl get pod\"
-alias  kgetpods=\"kubectl get pods --all-namespaces\"
+alias  kgetpods=\"kubectl get pods --all-namespaces -o wide\"
 alias   kgetpodw=\"watch kubectl get pod\"
 alias  kgetpodsw=\"watch kubectl get pods --all-namespaces\"
 
@@ -741,25 +1090,20 @@ alias kgetns=\"kubectl get namespaces --show-labels\"
 alias kget=\"kubectl get\"
 alias kgetall=\"kubectl get --all-namespaces --output=wide\"
 alias kdesc=\"kubectl describe\"
+alias kgetconfig=\"kubectl config view\"
 
 alias kdrn=\"echo Usage: kubectl drain \\\<node-name\\\> --ignore-daemonsets --delete-emptydir-data\"
 alias kdlt=\"echo Usage: kubectl delete node \\\<node-name\\\>\"
-function kdrain  { for n in \${@}; do kubectl drain \${n} --delete-emptydir-data --ignore-daemonsets; done; }
+function kdrain0 { for n in \${@}; do kubectl drain \${n} --delete-local-data=true --ignore-daemonsets; done; }
+function kdrain1 { for n in \${@}; do kubectl drain \${n} --delete-emptydir-data --ignore-daemonsets; done; }
 function kdelete { for n in \${@}; do kubectl delete node \${n}; done  ; }
+function kdrainall0  { kdrain0 \$(kubectl get nodes --no-headers|grep -v master|awk '" + '\\\'' + "'{print \$1}'" + '\\\'' + "') ; }
+function kdrainall1  { kdrain1 \$(kubectl get nodes --no-headers|grep -v master|awk '" + '\\\'' + "'{print \$1}'" + '\\\'' + "') ; }
+function kdrainall  { kubectl get nodes --no-headers|grep -v master|awk '" + '\\\'' + "'{print \$1}'" + '\\\'' + "'|xargs kubectl drain --delete-emptydir-data --ignore-daemonsets ; }
+function kdeleteall { kubectl get nodes --no-headers|grep -v master|awk '" + '\\\'' + "'{print \$1}'" + '\\\'' + "'|xargs kubectl delete node ; }
 
-alias master=/usr/local/bin/ssh-master
-alias pods=/usr/local/bin/ssh-pods
-echo \"Aliased: master => ssh-master\"
-echo \"Aliased: pods => ssh-pods\"
-
-export K_APISERVER=#{mstr_ip_pool[0]}
-export K_PODNETWORK=#{POD_NETWORK}
-export YAML_FLANNEL=\"https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml\"
-export YAML_CALICO=\"https://docs.projectcalico.org/manifests/calico.yaml\"
-export YAML_LOCAL=\"${HOME}/yaml/calico_3.17.apiv1.yaml\"
-export YAML_DASHBOARD=https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml
-#export YAML_=\"\"
-
+function ksetns { if [ -n \${1} ];then kubectl config set-context --current --namespace=\${1};else kubectl config set-context --current --namespace=default; fi ; }
+alias kreset=\"sudo su - -c '" + '\\\'' + "'kubeadm reset -f'" + '\\\'' + "' \&\& sudo rm -rf /joincluster \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\"
 
 
 info $(grep \"DISTRIB_DESCRIPTION\" /etc/lsb-release)
@@ -797,18 +1141,28 @@ if command -v docker > /dev/null 2>&1; then cyan \"docker:\" && docker --version
 if command -v docker-compose > /dev/null 2>&1; then cyan \"Docker Compose:\" && docker-compose --version; fi;
 if command -v aws > /dev/null 2>&1; then cyan \"AWS CLI:\" && /usr/local/bin/aws --version; else yellow \"No AWS CLI\"; fi && echo;
 
+declare -A _sessvars_
+export K_APISERVER=#{mstr_ip_pool[0]} && _sessvars_[K_APISERVER]=\${K_APISERVER}
+export K_PODNETWORK=#{POD_NETWORK} && _sessvars_[K_PODNETWORK]=\${K_PODNETWORK}
+export K_YAML_FLANNEL=https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml \
+  && _sessvars_[K_YAML_FLANNEL]=\${K_YAML_FLANNEL}
+export K_YAML_CALICO=https://docs.projectcalico.org/manifests/calico.yaml && _sessvars_[K_YAML_CALICO]=\${K_YAML_CALICO}
+export K_YAML_CALICO_LOCAL=${HOME}/yaml/calico_3.17.apiv1.yaml && _sessvars_[K_YAML_CALICO_LOCAL]=\${K_YAML_CALICO_LOCAL}
+export K_YAML_DASHBOARD=https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.5/aio/deploy/recommended.yaml \
+   && _sessvars_[K_YAML_DASHBOARD]=\${K_YAML_DASHBOARD}
+export KUBECONFIG=/home/vagrant/.kube/config && _sessvars_[KUBECONFIG]=\${KUBECONFIG}
+#export K_YAML_=
+
+
 echo && grey \"Session Variables\" && echo
-cyan \"KUBECONFIG:\" && echo \"  \${KUBECONFIG}\"
-cyan \"K_APISERVER:\" && echo \" \${K_APISERVER}\"
-cyan \"K_PODNETWORK:\" && echo \"\${K_PODNETWORK}\"
-cyan \"YAML_FLANNEL:\" && echo \"\${YAML_FLANNEL}\"
-cyan \"YAML_CALICO:\" && echo \" \${YAML_CALICO}\"
-cyan \"YAML_LOCAL:\" && echo \"  \${YAML_LOCAL}\"
+for key in \${!_sessvars_[@]}; do cyan \"$key:\" && echo \${_sessvars_[\$key]}; done
+
+
 echo
 echo -n \"docker: \" && systemctl status docker | grep --color=never Active
 echo -n \"containerd: \" && systemctl status containerd | grep --color=never Active
 echo -n \"kubelet: \" && systemctl status kubelet | grep --color=never Active
 
-'" + 'alias kreset=\\"sudo su - -c \\\'kubeadm reset -f\\\' \&\& sudo rm -rf /joincluster \&\& sudo rm -rf ${HOME}/.kube \&\& sudo rm -rf /etc/cni/net.d\\"'
+'"
 
 NOTHING = ""

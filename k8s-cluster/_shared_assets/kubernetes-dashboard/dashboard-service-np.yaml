@@ -4,7 +4,7 @@ kind: ServiceAccount    # Creates a new NodePort service that publishes that
 metadata:               #   publishes TargetPort 8443 as NodePort 30002
   name: admin-user
   namespace: kubernetes-dashboard
---- 
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -17,7 +17,7 @@ subjects:
 - kind: ServiceAccount
   name: admin-user
   namespace: kubernetes-dashboard
----   
+---
 kind: Service
 apiVersion: v1
 metadata:

@@ -7,24 +7,35 @@ ln -fsn ../empty.sh ./empty.sh
 ln -fsn empty.sh master.sh
 ln -fsn empty.sh node.sh
 ln -fsn empty.sh controller.sh
+ln -fsn ../rootkey.sh ./rootkey.sh
+ln -fsn ../vagrantkey.sh ./vagrantkey.sh
 ln -fsn ../root_key.sh ./root_key.sh
+ln -fsn ../vagrant_key.sh ./vagrant_key.sh
 ln -fsn ubuntu.k8s.sh ./simple.sh
 ln -fsn ../box.hosts_sync.sh ./sync.hosts.sh
 ln -fsn ../ubuntu.commands.sudo.sh ./ubuntu.commands.sudo.sh
 ln -fsn ../ubuntu.k8s.sh ./ubuntu.k8s.sh
-ln -fsn ../vagrant_key.sh ./vagrant_key.sh
 
-base=k8s-cluster
+base=../k8s-cluster
+
+find ${base}/_shared_assets -type d|sed "s/\.\.\/\k8s-cluster/\./"|xargs mkdir 2>/dev/null
+
 # RECURSIVELY LINKS ASSET FILES
-dir=_shared_assets && target=./${dir} && src=../${base}/${dir}
-if [ ! -d ${target} ]; then mkdir ${target}; fi
-for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} ./${target}/${f}; fi; done
+for dir in $(find ${base}/_shared_assets -type d|sed "s/\.\.\/\k8s-cluster/\./"); do
+	target=./${dir} && src=${base}/${dir}
+	if [ ! -d ${target} ]; then mkdir ${target}; fi
+	for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} ./${target}/${f}; fi; done
+done
 
-dir=_shared_assets/techcraz && target=./${dir} && src=../${base}/${dir}
-if [ ! -d ${target} ]; then mkdir ${target}; fi
-for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} ./${target}/${f}; fi; done
+#dir=_shared_assets &&          target=./${dir} && src=${base}/${dir}
+#if [ ! -d ${target} ]; then mkdir ${target}; fi
+#for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} ./${target}/${f}; fi; done
+
+#dir=_shared_assets/techcraz && target=./${dir} && src=${base}/${dir}
+#if [ ! -d ${target} ]; then mkdir ${target}; fi
+#for f in $(ls -1 ${src}/); do if [ ! -d ${src}/${f} ]; then ln -fn ${src}/${f} ./${target}/${f}; fi; done
 
 
-echo 0 > CTLR_CT
-echo 1 > MSTR_CT
-echo 1 > POD_CT
+touch CTLR_CT
+touch MSTR_CT
+touch POD_CT

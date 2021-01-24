@@ -1,5 +1,11 @@
-kubectl api-resources --namespaced=true
-kubectl api-resources --namespaced=false
-kubectl cluster-info
-kubectl -n kubernetes-dashboard describe service kubernetes-dashboard
-kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+k api-resources --namespaced=true
+k cluster-info
+k -n kube-system get cm kubeadm-config -o yaml
+
+k -n kubernetes-dashboard describe service kubernetes-dashboard
+k -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+
+k get pods --all-namespaces -o wide
+kdesc service kubernetes-dashboard -n kubernetes-dashboard
+kdesc pod kubernetes-dashboard -n kubernetes-dashboard
+k get endpoints

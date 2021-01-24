@@ -3,15 +3,58 @@
 for i in "$@"
 do
 case $i in
-        -p=*|-provision-with=*)
-        PROVISIONWITH="--provision-with ${i#*=}"
+        -n)
+        NOMIRROR=NOMIRROR
+        shift # past argument=value
+        ;;
+        -m)
+        MIRRORONLY=MIRRORONLY
         shift # past argument=value
         ;;
 esac
 done
 
-echo "Executing: vagrant provision ${@} ${PROVISIONWITH}"
-if [ ${#} -gt 0 ];
- then time vagrant provision ${@} ${PROVISIONWITH} && vagrant provision ${@} --provision-with SyncTest;
- else if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${PROVISIONWITH} && vagrant provision ${@} --provision-with SyncTest; fi;
- fi
+
+if [ ${MIRRORONLY} ]; then echo MIRROR ONLY
+  IFS='-' mirrored=( ${PWD##*/} )
+  IFS=' ' mirror="${mirrored}-mirror"
+  if [ -d ../${mirror} ] && [[ ${mirror} != ${PWD##*/} ]]; then
+    echo "Doing ${mirror} with Parms: ${*}"
+    pushd ../${mirror} >/dev/null
+    /Users/brandonindia/Vagrant/prov ${*}&
+    popd >/dev/null
+  fi
+else
+
+  if [ ! ${NOMIRROR} ]; then
+    IFS='-' mirrored=( ${PWD##*/} )
+    IFS=' ' mirror="${mirrored}-mirror"
+    if [ -d ../${mirror} ] && [[ ${mirror} != ${PWD##*/} ]]; then
+      echo "Doing ${mirror} with Parms: ${*}"
+      pushd ../${mirror} >/dev/null
+      /Users/brandonindia/Vagrant/prov ${*}&
+
+#echo ${*}
+#exit 2
+      popd >/dev/null
+    fi
+  fi
+
+  for i in "$@"
+  do
+  case $i in
+          -p=*|-provision-with=*)
+          PROVISIONWITH="--provision-with ${i#*=}"
+          shift # past argument=value
+          ;;
+  esac
+  done
+
+
+  echo "Executing: vagrant provision ${@} ${PROVISIONWITH}"
+  if [ ${#} -gt 0 ];
+   then vagrant provision ${@} ${PROVISIONWITH} && echo prov ended with exit status $?
+
+   else if [[ ! -z ${PROVISIONWITH} ]]; then vagrant provision ${PROVISIONWITH} && echo prov ended with exit status $?; fi;
+  fi
+fi

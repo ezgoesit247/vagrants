@@ -2,11 +2,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: wordpress
+  namespace: tz
   labels:
     app: wordpress
 spec:
   ports:
-    - port: 80
+    - port: 81
   selector:
     app: wordpress
     tier: frontend
@@ -15,7 +16,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: wp-pv-claim
+  name: wp-pv-claim-tz
+  namespace: tz
   labels:
     app: wordpress
 spec:
@@ -24,12 +26,13 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/var/www/html"
+    path: "/var/www/html-tz"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: wp-pv-claim
+  name: wp-pv-claim-tz
+  namespace: tz
   labels:
     app: wordpress
 spec:
@@ -43,6 +46,7 @@ apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
 kind: Deployment
 metadata:
   name: wordpress
+  namespace: tz
   labels:
     app: wordpress
 spec:
@@ -67,15 +71,15 @@ spec:
         - name: WORDPRESS_DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: mysql-pass
+              name: mysql-pwd
               key: password
         ports:
-        - containerPort: 80
+        - containerPort: 81
           name: wordpress
         volumeMounts:
         - name: wordpress-persistent-storage
-          mountPath: /var/www/html
+          mountPath: /var/www/html-tz
       volumes:
       - name: wordpress-persistent-storage
         persistentVolumeClaim:
-          claimName: wp-pv-claim
+          claimName: wp-pv-claim-tz
