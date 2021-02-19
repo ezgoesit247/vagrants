@@ -189,7 +189,7 @@ echo '#!/bin/bash
 
 if ! ntpstat > /dev/null 2>&1
    then service ntp stop && ntpdate time.nist.gov && service ntp start
-   ntp_tries=15 && ntp_delay_seconds=2 && i=0
+   ntp_tries=6 && ntp_delay_seconds=8 && i=0
    while ! ntpstat
      do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1`
      if [ ${i} -ge ${ntp_tries} ]
@@ -214,7 +214,7 @@ EOF
 
 $APPEND_ETC_BASHRC = <<EOF
 echo #{MSG} Running: \\$APPEND_ETC_BASHRC
-bashrc=/etc/bash.bashrc
+bashrc=shrc
 library=/etc/k.library
 
 echo '### START BASHRC' >> ${bashrc}
@@ -455,6 +455,7 @@ source /etc/k.library
 ########################
 ###
 ###  -u UNDEPLOY KUBECTL DELETE
+###  -k GET ADMIN TOKEN
 ###
 ########################
 function deploy {
@@ -471,7 +472,9 @@ function un-go {
   kubectl delete -f ${K_YAML_DASHBOARD}
 }
 function gettoken {
-  kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk \"{print \\$1}\") | grep token
+  kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk \"{print \\$1}\") | grep token \
+    |grep token:|awk '\\\''{print $2}'\\\''
+
 }
 
 ################## GO ############################
@@ -692,6 +695,7 @@ for u in `ls -C /home`;do
 done
 echo 'alias ls="ls -Ahltr --color=auto"' >> /root/.bashrc
 echo 'export PS1="\\[\\e]0;\\u@\\h: \\w\\a\\]${debian_chroot:+($debian_chroot)}\\[\\033[1;32m\\]\\u\\[\\033[0m\\]@\\[\\033[1;31m\\]\\h:\\[\\033[0;37m\\]\\w\\[\\033[0m\\]\\$ "' >> /root/.bashrc
+echo 'PATH=$PATH:/root/Docker' >> /root/.bashrc
 
 date >> /etc/vagrant_provisioned_at
          EOF
@@ -709,6 +713,8 @@ date >> /etc/vagrant_provisioned_at
       subconfig.vm.network "forwarded_port", guest: 22, host: PORT, id: "ssh", auto_correct: true
       subconfig.vm.network "private_network", ip: mstr_ip_pool[0], netmask: NODE_MASK, virtualbox__intnet: "#{File.basename(Dir.getwd)}#{TEST}"
       subconfig.vm.synced_folder "_shared_assets/", "/home/vagrant/_assets"
+      subconfig.vm.synced_folder "/Users/brandonindia/Docker", "/root/Docker"
+      subconfig.vm.synced_folder "/Users/brandonindia/Docker/assets.docker", "/root/assets.docker"
 
       subconfig.vm.box = "#{IMAGE}"
       subconfig.vm.hostname = "#{PURPOSE}-#{MASTER}.#{LIFECYCLE}.#{DOMAIN}"
@@ -721,16 +727,7 @@ date >> /etc/vagrant_provisioned_at
       end
       subconfig.vm.provision "adhoc", type: "shell", run: "never", name: "adhoc", inline: $APPEND_ETC_BASHRC + <<-EOF
             #{NOTHING}
-kubeadm reset -f
-K8S_VERSION=#{K8S_VERSION_20}
-systemctl stop kubelet
-apt-get remove -qq kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
-rm -rf /opt/cni/bin/*
-apt-get -qq update
-K8S_VERSION=#{K8S_VERSION_19}
-apt-get install -qq          kubelet=${K8S_VERSION}          kubeadm=${K8S_VERSION}          kubectl=${K8S_VERSION}          kubernetes-cni
-systemctl enable kubelet
-systemctl start kubelet
+            echo 'PATH=$PATH:/root/Docker' >> /root/.bashrc
       EOF
    end
 ### END MASTER ###
@@ -856,6 +853,8 @@ K8S_VERSION_20="1.20.2-00"
 K8S_VERSION_19="1.19.7-00"
 K8S_VERSION_18="1.18.15-00"
 K8S_VERSION_17="1.17.17-00"
+
+DOCKERVERSIONS="apt-cache madison docker-ce docker-ce-cli"
 DOCKER_VERSION_5_20="5:20.10.2~3-0~ubuntu-bionic"
 DOCKER_VERSION_5_19="5:19.03.14~3-0~ubuntu-bionic"
 
@@ -863,59 +862,59 @@ K8S_VERSION=K8S_VERSION_20
 DOCKER_VERSION=DOCKER_VERSION_5_20
 
 NTP = 'echo ' + msg("Installing NTP")+'
-   apt-get -y -qq install ntp ntpdate ntpstat \
-      && if service ntp status > /dev/null; then service ntp stop; fi \
-      && echo "syncing NTP with time.nist.gov..." \
-      && ntpdate time.nist.gov && service ntp start \
-      && ntp_tries=10 && ntp_delay_seconds=3 && i=0 \
-      && while ! ntpstat; do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1` \
-      &&    if [ ${i} -ge ${ntp_tries} ]; \
-               then echo -n "NTP:" && echo bailing && break; fi; done'
+apt-get -y -qq install ntp ntpdate ntpstat \
+&& if service ntp status > /dev/null; then service ntp stop; fi \
+&& echo "syncing NTP with time.nist.gov..." \
+&& ntpdate time.nist.gov && service ntp start \
+&& ntp_tries=6 && ntp_delay_seconds=8 && i=0 \
+&& while ! ntpstat; do sleep ${ntp_delay_seconds} && i=`expr ${i} + 1` \
+&&    if [ ${i} -ge ${ntp_tries} ]; \
+then echo -n "NTP:" && echo bailing && break; fi; done'
 
 PYTHON = 'echo ' + msg("Installing Python")+'
-   apt-get install -qq python3 \
-      && update-alternatives --install \
-            /usr/bin/python python /usr/bin/python3 1'
+apt-get install -qq python3 \
+&& update-alternatives --install \
+/usr/bin/python python /usr/bin/python3 1'
 
 ANSIBLE = 'echo ' + msg("Installing Ansible")+'
-   apt-add-repository --yes --update ppa:ansible/ansible\
-   && apt-get install -qq ansible'
+apt-add-repository --yes --update ppa:ansible/ansible\
+&& apt-get install -qq ansible'
 
 AWSCLI = 'echo ' + msg("Installing AWS CLI")+'
-   if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
-   if ! command -v unzip > /dev/null; then apt-get install -qq unzip; fi
-   curl -s https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip\
-   && if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && ./aws/install; else ./aws/install --update; fi'
+if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
+if ! command -v unzip > /dev/null; then apt-get install -qq unzip; fi
+curl -s https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip\
+&& if ! command -v aws > /dev/null; then unzip -q awscliv2.zip && ./aws/install; else ./aws/install --update; fi'
 
-DOCKER = 'DOCKER_VERSION="' + "#{DOCKER_VERSION}" + '" && echo ' + msg("Installing Docker version: ${DOCKER_VERSION}")+'
-   apt-get -qq update
-   if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
-   apt-get install -qq \
-         apt-transport-https \
-         ca-certificates \
-         gnupg-agent \
-         software-properties-common \
-      && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-      && apt-key fingerprint 0EBFCD88 \
-      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-      && apt-get -qq update \
-      && apt-get -qq install\
-         docker-ce=${DOCKER_VERSION} \
-         docker-ce-cli=${DOCKER_VERSION}'
+DOCKER = 'DOCKER_VERSION="' + "noversion" + '" && echo ' + msg("Installing Docker version: ${DOCKER_VERSION}")+'
+apt-get -qq update
+if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
+apt-get install -qq \
+apt-transport-https \
+ca-certificates \
+gnupg-agent \
+software-properties-common \
+&& curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+&& apt-key fingerprint 0EBFCD88 \
+&& add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+&& apt-get -qq update \
+&& apt-get -qq install \
+docker-ce \
+docker-ce-cli'
 
 CONTAINERD = 'echo ' + msg("Installing CONTAINERD")+'
 apt-get -qq update
-   if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
-   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
-      && apt-key fingerprint 0EBFCD88 \
-      && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-      && apt-get -qq update \
-      && apt-get install -qq \
-         apt-transport-https \
-         ca-certificates \
-         gnupg2 \
-         software-properties-common \
-         containerd.io'
+if ! command -v curl > /dev/null; then apt-get install -qq curl; fi
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+&& apt-key fingerprint 0EBFCD88 \
+&& add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+&& apt-get -qq update \
+&& apt-get install -qq \
+apt-transport-https \
+ca-certificates \
+gnupg2 \
+software-properties-common \
+containerd.io'
 
 CONTAINER_CONFIG ='
 cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
@@ -945,26 +944,26 @@ net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
 EOF
-   sysctl --system >/dev/null 2>&1 \
-      && sed -i "/swap/d" /etc/fstab && swapoff -a'
+sysctl --system >/dev/null 2>&1 \
+&& sed -i "/swap/d" /etc/fstab && swapoff -a'
 
 DOCKERCOMPOSE = 'echo ' + msg("Installing Docker Compose")+'
-   curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
-      && chmod +x /usr/local/bin/docker-compose'
+curl -sL https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose \
+&& chmod +x /usr/local/bin/docker-compose'
 
 
 
 K8S = 'K8S_VERSION="' + "#{K8S_VERSION}" + '" && echo ' + msg("Installing k8s version: ${K8S_VERSION}")+'
-   echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list \
-      && curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-      && apt-get -qq update \
-      && apt-get install -qq \
-         kubelet=${K8S_VERSION} \
-         kubeadm=${K8S_VERSION} \
-         kubectl=${K8S_VERSION} \
-         kubernetes-cni
-   systemctl enable kubelet >/dev/null 2>&1
-   systemctl start kubelet >/dev/null 2>&1'
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list \
+&& curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+&& apt-get -qq update \
+&& apt-get install -qq \
+kubelet=${K8S_VERSION} \
+kubeadm=${K8S_VERSION} \
+kubectl=${K8S_VERSION} \
+kubernetes-cni
+systemctl enable kubelet >/dev/null 2>&1
+systemctl start kubelet >/dev/null 2>&1'
 
 HELM = '
 curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash \
@@ -1150,7 +1149,7 @@ if systemctl --all --type service | grep -q ntp.service; then \
       sudo systemctl start ntp.service; fi
    echo \"NTP sync...\"
    if command -v ntpstat > /dev/null 2>&1; then
-      ntp_tries=15 && ntp_delay_seconds=2 && i=0
+      ntp_tries=6 && ntp_delay_seconds=8 && i=0
       while ! ntpstat 2> /dev/null
         do sleep \${ntp_delay_seconds} && i=\`expr \${i} + 1\`
         if [ \${i} -ge \${ntp_tries} ]
